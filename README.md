@@ -37,6 +37,13 @@ claude.ai のページとして開くと、`db` capability による共有デー
 - 投薬の実施記録（`doseLogs`）、投薬時刻（`Medication.scheduleTimes`）、入力者（`by`）を追加
 - 選択できる薬は `src/screens/shared.tsx` の `GENERICS`（PB／ゾニサミド／レベチラセタム／ガバペンチン）
 
+## プッシュ通知と写真読み取り（2026-10-09）
+
+- **プッシュ通知**: `public/push-sw.js` を Service Worker に取り込み（`vite.config.ts` の `importScripts`）、設定画面の「プッシュ通知」で端末を登録する（`src/lib/push.ts` → `push_subscriptions`）。iPhone はホーム画面に追加したアイコンから開いたときだけ登録できる
+- **送信側**: Edge Function `dose-reminders`（`supabase/functions/dose-reminders/`）。Supabase Cron が5分ごとに呼び、未記録の予定を `REMIND_MIN`（既定30）分おきに全端末へ送る。間引きは `reminder_state` 表（`supabase/reminders.sql`）。呼び出しは公開キーの Authorization と `x-cron-secret` ヘッダ
+- **写真読み取り**: Edge Function `lab-ocr` が Claude API（`ANTHROPIC_API_KEY`）で報告書画像を JSON にする。利用者の確認は関数内（`x-user-token`）。鍵が未設定のときは 503 → アプリは「未設定」と表示して手入力に戻る
+- 秘密情報（VAPID 秘密鍵・CRON_SECRET・ANTHROPIC_API_KEY）は Supabase の Edge Function Secrets にだけ置く。リポジトリには入れない
+
 ## 構成
 
 - `src/db.ts` Dexie（IndexedDB）のテーブル定義。設計案⑤のテーブルに対応
