@@ -8,6 +8,7 @@ import { today } from '../lib/format'
 import { SEX_OPTIONS } from './shared'
 import { requestNotifyPermission } from '../lib/alerts'
 import { pushState, subscribePush, unsubscribePush, type PushState } from '../lib/push'
+import { DOG_PALETTE, dogColorMap } from '../lib/dogColor'
 
 export default function Settings() {
   const { t } = useTranslation()
@@ -47,6 +48,7 @@ export default function Settings() {
   const view = { ...(dog ?? ({} as Dog)), ...(draft ?? {}) }
   const plan = planDraft ?? dog?.emergencyPlan ?? { triggerMin: 5, steps: [] }
   const patchDog = (p: Partial<Dog>) => setDraft({ ...(draft ?? {}), ...p })
+  const colorOf = dog ? dogColorMap(dogs)[dog.id] : DOG_PALETTE[0]
   const savePlan = (p: Partial<EmergencyPlan>) => setPlanDraft({ ...plan, ...p, updatedAt: today() })
 
   async function addDog() {
@@ -168,6 +170,14 @@ export default function Settings() {
           <div className="field"><span className="k">{t('settings.sex')}</span>
             <select value={view.sex ?? 'unknown'} onChange={(e) => patchDog({ sex: e.target.value })}>{SEX_OPTIONS.map((x) => <option key={x} value={x}>{t('settings.sexes.' + x)}</option>)}</select></div>
           <div className="field"><span className="k">{t('settings.breed')}</span><input value={view.breed ?? ''} onChange={(e) => patchDog({ breed: e.target.value })} /></div>
+          <div className="field"><span className="k">{t('settings.color')}</span>
+            <div className="swatches">
+              {DOG_PALETTE.map((c) => <button key={c} className={'swatch' + (colorOf === c ? ' on' : '')} style={{ background: c }} aria-label={c} onClick={() => db.dogs.update(dog.id, { color: c })} />)}
+              <label className="swatch custom" style={{ background: colorOf }} title={t('settings.colorCustom')}>
+                <input type="color" value={colorOf} onChange={(e) => db.dogs.update(dog.id, { color: e.target.value })} />
+              </label>
+            </div>
+          </div>
           <div className="field"><span className="k">{t('settings.diagnosis')}</span><input value={view.diagnosis ?? ''} placeholder={t('report.dx.idiopathic_epilepsy')} onChange={(e) => patchDog({ diagnosis: e.target.value })} /></div>
           <div className="field"><span className="k">{t('settings.diagnosisDate')}</span><input type="date" value={view.diagnosisDate ?? ''} onChange={(e) => patchDog({ diagnosisDate: e.target.value || undefined })} /></div>
           <div className="field"><span className="k">{t('settings.weightKg')}</span><input type="number" step="0.1" value={kg} placeholder={String([...dog.weights].sort((a, b) => a.date.localeCompare(b.date)).pop()?.kg ?? '')} onChange={(e) => setKg(e.target.value)} />

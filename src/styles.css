@@ -12,6 +12,12 @@ a{color:var(--accent-ink);text-decoration:none}
 .dogtab.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .dogtab:active{transform:scale(.98)}
 .dogadd{min-width:44px;min-height:44px;border:1.5px dashed var(--rule);border-radius:12px;background:transparent;color:var(--muted);font-size:20px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;padding:0;cursor:pointer;position:relative}
+.swatch.on{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+.swatch.custom{display:inline-flex;align-items:center;justify-content:center;border:2px dashed var(--muted);color:#fff;font-weight:800}
+.swatch.custom::after{content:'+';font-size:18px;text-shadow:0 0 3px rgba(0,0,0,.5)}
+.swatch.custom input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 .dogsel{flex:1;min-height:44px;border:1.5px solid var(--accent);border-radius:12px;background:var(--surface);font-size:16px;font-weight:700;padding:6px 12px}
 .main{flex:1;padding:0 14px 170px;display:flex;flex-direction:column;gap:10px}
 .card{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:12px 14px}

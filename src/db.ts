@@ -19,6 +19,8 @@ export interface Dog {
   birthDate?: string
   sex?: string
   breed?: string
+  /** display colour (hex) used for the switcher tabs and alerts */
+  color?: string
   diagnosis?: string
   diagnosisDate?: string
   regionCode?: string

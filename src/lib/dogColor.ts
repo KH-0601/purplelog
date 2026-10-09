@@ -5,6 +5,6 @@ export const DOG_PALETTE = ['#6B4FBB', '#E07A2F', '#2A9D8F', '#D64570', '#3B7DD8
 
 export function dogColorMap(dogs: Dog[]): Record<string, string> {
   const out: Record<string, string> = {}
-  dogs.forEach((d, i) => { out[d.id] = DOG_PALETTE[i % DOG_PALETTE.length] })
+  dogs.forEach((d, i) => { out[d.id] = d.color || DOG_PALETTE[i % DOG_PALETTE.length] })
   return out
 }
