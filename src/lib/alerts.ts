@@ -16,6 +16,9 @@ export interface DueItem {
   planId?: string
   mgPerDose?: number
   overdueMin: number
+  /** set when items from several dogs are merged */
+  dogId?: string
+  dogName?: string
 }
 
 export function computeDue(meds: Medication[], plans: DosePlan[], logs: DoseLog[], now: Date): DueItem[] {

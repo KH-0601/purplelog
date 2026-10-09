@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { db, uid } from './db'
-import { useDog, useSettings } from './lib/useData'
+import { updateSettings, useDog, useDogs, useSettings } from './lib/useData'
+import { dogColorMap } from './lib/dogColor'
 import { currentUserId, useCloud } from './lib/cloud'
 import { nowLocalISO } from './lib/format'
 import Home from './screens/Home'
@@ -19,6 +20,34 @@ import AddRecord from './screens/AddRecord'
 import DoseAlerts from './screens/DoseAlerts'
 import Login from './screens/Login'
 import { startSupabase } from './lib/cloud'
+
+/** Dog switcher: one large button per dog, always visible under the title. */
+function DogBar({ current, onAdd }: { current?: string; onAdd: () => void }) {
+  const { t } = useTranslation()
+  const dogs = useDogs()
+  const colors = dogColorMap(dogs)
+  if (dogs.length === 0) return null
+  const pick = (id: string) => void updateSettings({ currentDogId: id })
+  if (dogs.length > 4) {
+    return (
+      <div className="dogbar noprint">
+        <select className="dogsel" value={current ?? ''} onChange={(e) => pick(e.target.value)} aria-label={t('settings.dogs')}>
+          {dogs.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+      </div>
+    )
+  }
+  return (
+    <div className="dogbar noprint" role="tablist" aria-label={t('settings.dogs')}>
+      {dogs.map((d) => (
+        <button key={d.id} role="tab" aria-selected={d.id === current} className={'dogtab' + (d.id === current ? ' on' : '')} style={d.id === current ? { background: colors[d.id], borderColor: colors[d.id] } : { color: colors[d.id], borderColor: colors[d.id] }} onClick={() => pick(d.id)}>
+          {d.name}
+        </button>
+      ))}
+      {dogs.length < 4 && <button className="dogadd" onClick={onAdd} aria-label={t('settings.addDog')} title={t('settings.addDog')}>＋</button>}
+    </div>
+  )
+}
 
 export default function App() {
   const { t, i18n } = useTranslation()
@@ -66,13 +95,9 @@ export default function App() {
           <span className={'tag ' + cloudCls} title={t('cloud.status.' + cloud.status)} onClick={() => nav('/settings')} style={{ cursor: 'pointer' }}>
             {cloudDot} {t('cloud.short.' + cloud.status)}
           </span>
-          {dog && (
-            <button className="chip" onClick={() => nav('/settings')}>
-              {dog.name} ▾
-            </button>
-          )}
         </div>
       </header>
+      <DogBar current={dog?.id} onAdd={() => nav('/settings')} />
       <main className="main">
         {cloud.backend === 'supabase' && cloud.status === 'login' && <Login onDone={() => void startSupabase()} />}
         {cloud.backend === 'supabase' && cloud.status === 'readonly' && cloud.lastError && <div className="alert">{t('login.notAllowed')}</div>}
@@ -106,7 +131,7 @@ export default function App() {
           </button>
         </div>
       )}
-      <DoseAlerts dog={dog} />
+      <DoseAlerts />
       <nav className="tabs noprint">
         <NavLink to="/" end>
           <i>⌂</i>
