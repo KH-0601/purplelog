@@ -7,6 +7,7 @@ import { findRange, normalize } from '../lib/normalize'
 import { fmtDate, nowLocalISO, today } from '../lib/format'
 import { ANALYTES, DRUG_ANALYTES, GENERICS, defaultSchedule } from './shared'
 import LabPhotoImport from './LabPhotoImport'
+import { labImageUrl } from '../lib/supabase'
 import { normaliseUnit, uploadImage, type Extracted } from '../lib/labImport'
 import { useCloud } from '../lib/cloud'
 
@@ -18,6 +19,13 @@ function LabThumb({ lab }: { lab: Lab }) {
       const u = URL.createObjectURL(lab.imageBlob)
       setUrl(u)
       return () => URL.revokeObjectURL(u)
+    }
+    if (lab.imageAssetId?.startsWith('sb:')) {
+      let alive = true
+      labImageUrl(lab.imageAssetId).then((u) => alive && setUrl(u))
+      return () => {
+        alive = false
+      }
     }
     setUrl(lab.imageAssetId ? `/_blob/${lab.imageAssetId}` : null)
   }, [lab.imageBlob, lab.imageAssetId])

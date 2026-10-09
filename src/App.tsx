@@ -17,6 +17,8 @@ import DevCommunity from './screens/DevCommunity'
 import DevDog from './screens/DevDog'
 import AddRecord from './screens/AddRecord'
 import DoseAlerts from './screens/DoseAlerts'
+import Login from './screens/Login'
+import { startSupabase } from './lib/cloud'
 
 export default function App() {
   const { t, i18n } = useTranslation()
@@ -72,7 +74,9 @@ export default function App() {
         </div>
       </header>
       <main className="main">
-        {!dog && (
+        {cloud.backend === 'supabase' && cloud.status === 'login' && <Login onDone={() => void startSupabase()} />}
+        {cloud.backend === 'supabase' && cloud.status === 'readonly' && cloud.lastError && <div className="alert">{t('login.notAllowed')}</div>}
+        {!dog && cloud.status !== 'login' && (
           <div className="card">
             <div className="note">{t('settings.noDog')}</div>
             <button className="btn sm" style={{ marginTop: 8 }} onClick={() => nav('/settings')}>＋ {t('settings.addDog')}</button>

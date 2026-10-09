@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { db, uid, type Dog, type EmergencyPlan } from '../db'
 import { updateSettings, useDog, useDogs, useSettings } from '../lib/useData'
-import { useCloud } from '../lib/cloud'
+import { signOut, useCloud } from '../lib/cloud'
 import { toGrid } from '../lib/weather'
 import { today } from '../lib/format'
 import { SEX_OPTIONS } from './shared'
@@ -123,6 +123,9 @@ export default function Settings() {
         </div>
         {cloud.pending > 0 && <div className="note">{t('cloud.pending', { n: cloud.pending })}</div>}
         {cloud.lastError && <div className="note">{cloud.lastError}</div>}
+        {cloud.backend === 'supabase' && cloud.userEmail && (
+          <div className="row"><span className="grow note">{t('login.signedInAs')}: {cloud.userEmail}</span><button className="btn sec sm" onClick={() => void signOut()}>{t('login.signOut')}</button></div>
+        )}
         <div className="note">{cloud.status === 'local' ? t('cloud.localNote') : t('cloud.sharedNote')}</div>
       </div>
 

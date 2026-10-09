@@ -3,6 +3,9 @@
  * and store the image with the `assets` capability. Both are optional: without them the
  * form still accepts a photo (kept on the device) and manual values.
  */
+import { currentBackend } from './cloud'
+import { uploadLabImage } from './supabase'
+
 type SampleFn = ((input: string, opts?: Record<string, unknown>) => Promise<{ text: string }>) & {
   json<T>(input: string, opts?: Record<string, unknown>): Promise<T>
   limits(): Promise<{ images?: { maxCount: number; maxInputBytes: number; mediaTypes: string[] } }>
@@ -91,6 +94,7 @@ export function normaliseUnit(analyte: string, value: number, unit: string | nul
 
 /** Store the image with the artifact when possible; null when this view cannot (kept on the device only). */
 export async function uploadImage(blob: Blob): Promise<string | null> {
+  if (currentBackend() === 'supabase') return uploadLabImage(blob, Math.random().toString(36).slice(2) + Date.now().toString(36))
   const a = await getAssets()
   if (!a) return null
   try {
