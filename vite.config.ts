@@ -11,7 +11,7 @@ export default defineConfig({
     basicSsl(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'push-sw.js'],
       manifest: {
         name: 'PurpleLog',
         short_name: 'PurpleLog',
@@ -21,7 +21,7 @@ export default defineConfig({
         display: 'standalone',
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' }],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,json}'] },
+      workbox: { globPatterns: ['**/*.{js,css,html,svg,json}'], importScripts: ['push-sw.js'] },
     }),
   ],
 })

@@ -55,7 +55,7 @@ export default function LabPhotoImport({ onImage, onExtract }: { onImage: (b: Bl
       setMsg(t('labimg.done', { n, other: x.results.length - n }) + (x.notes ? ` ${x.notes}` : ''))
     } catch (e) {
       const code = (e as { code?: string })?.code
-      setMsg(code === 'cancelled' ? null : code === 'not_granted' ? t('labimg.notGranted') : t('labimg.failed') + (code ? ` (${code})` : ''))
+      setMsg(code === 'cancelled' ? null : code === 'not_granted' ? t('labimg.notGranted') : code === 'not_configured' ? t('labimg.notConfigured') : t('labimg.failed') + (code ? ` (${code})` : ''))
     } finally {
       setBusy(false)
     }

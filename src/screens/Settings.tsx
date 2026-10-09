@@ -7,6 +7,7 @@ import { toGrid } from '../lib/weather'
 import { today } from '../lib/format'
 import { SEX_OPTIONS } from './shared'
 import { requestNotifyPermission } from '../lib/alerts'
+import { pushState, subscribePush, unsubscribePush, type PushState } from '../lib/push'
 
 export default function Settings() {
   const { t } = useTranslation()
@@ -22,6 +23,10 @@ export default function Settings() {
   const [draft, setDraft] = useState<Partial<Dog> | null>(null)
   const [planDraft, setPlanDraft] = useState<EmergencyPlan | null>(null)
   const [notifyState, setNotifyState] = useState<NotificationPermission | 'unsupported'>(() => ('Notification' in window ? Notification.permission : 'unsupported'))
+  const [push, setPush] = useState<PushState | null>(null)
+  useEffect(() => {
+    if (cloud.backend === 'supabase') pushState().then(setPush)
+  }, [cloud.backend, cloud.status])
 
   // Profile fields: edit locally, save 400 ms after the last keystroke.
   useEffect(() => {
@@ -219,6 +224,14 @@ export default function Settings() {
         <div className="row"><span className="grow">{notifyState === 'granted' ? t('alert.notifyGranted') : notifyState === 'denied' ? t('alert.notifyDenied') : notifyState === 'unsupported' ? t('alert.notifyUnsupported') : t('alert.notify')}</span>
           {notifyState === 'default' && <button className="btn sec sm" onClick={async () => setNotifyState(await requestNotifyPermission())}>{t('alert.notify')}</button>}</div>
         <div className="note">{t('alert.scope')}</div>
+        {cloud.backend === 'supabase' && push && (
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
+            <h4>{t('alert.push')}</h4>
+            <div className="note" style={{ marginBottom: 6 }}>{t('alert.pushState.' + push)}</div>
+            {push === 'not_subscribed' && cloud.userId && <button className="btn sm" onClick={async () => setPush(await subscribePush(cloud.userId!).catch((): PushState => 'not_subscribed'))}>{t('alert.pushOn')}</button>}
+            {push === 'subscribed' && <button className="btn sec sm" onClick={async () => { await unsubscribePush(); setPush(await pushState()) }}>{t('alert.pushOff')}</button>}
+          </div>
+        )}
       </div>
       <div className="card">
         <h4>{t('settings.consent')}</h4>

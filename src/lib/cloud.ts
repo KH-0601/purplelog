@@ -8,6 +8,7 @@
 import { useSyncExternalStore } from 'react'
 import { db, SHARED_TABLES, type SharedTable } from '../db'
 import { currentSession, deleteDoc, fetchAllDocs, joinHousehold, subscribeDocs, supabase, supabaseConfigured, upsertDoc, type DocRow } from './supabase'
+import { refreshPush } from './push'
 
 type DocSnap = { id: string; exists: boolean; data(): Record<string, unknown> | undefined }
 type Change = { type: string; doc: DocSnap }
@@ -224,6 +225,7 @@ export async function startSupabase(): Promise<void> {
     unsubscribe?.()
     unsubscribe = subscribeDocs((row: DocRow) => void applyRows([row]))
     setState({ status: 'ready', canWrite: true, isOwner: true })
+    void refreshPush(session.user.id)
   } catch (e) {
     setState({ status: 'error', lastError: String((e as Error)?.message ?? e) })
   }

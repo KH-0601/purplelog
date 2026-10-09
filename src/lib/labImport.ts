@@ -4,7 +4,7 @@
  * form still accepts a photo (kept on the device) and manual values.
  */
 import { currentBackend } from './cloud'
-import { uploadLabImage } from './supabase'
+import { supabase, uploadLabImage } from './supabase'
 
 type SampleFn = ((input: string, opts?: Record<string, unknown>) => Promise<{ text: string }>) & {
   json<T>(input: string, opts?: Record<string, unknown>): Promise<T>
@@ -26,6 +26,7 @@ export function getAssets() {
 }
 /** True when this view can send images to Claude. */
 export async function canReadImages() {
+  if (currentBackend() === 'supabase') return true
   const s = await getSample()
   if (!s) return false
   try {
@@ -63,7 +64,22 @@ const PROMPT = `添付画像は動物病院向けの臨床検査結果（検査�
 analyte の対応: フェノバルビタール/フェノバール/Phenobarbital→PB、臭化物/ブロマイド/Bromide/KBr→KBr、ゾニサミド/Zonisamide→ZNS、レベチラセタム/イーケプラ/Levetiracetam→LEV、T4/総T4/サイロキシン/Thyroxine→T4、FT4/遊離T4/Free T4→FT4、TSH/cTSH→TSH、ALT/GPT→ALT、ALP→ALP。それ以外は OTHER。
 日付は採血日または受付日を優先し、不明なら報告日。数値は報告書の表記どおり（単位変換はしない）。読めない値は null にして推測しないでください。`
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer()
+  let bin = ''
+  const bytes = new Uint8Array(buf)
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(bin)
+}
+
 export async function extractFromImage(blob: Blob, signal?: AbortSignal): Promise<Extracted> {
+  if (currentBackend() === 'supabase') {
+    const image = await blobToBase64(blob)
+    const { data, error } = await supabase().functions.invoke('lab-ocr', { body: { image, mime: blob.type || 'image/jpeg', prompt: PROMPT } })
+    if (error) throw { code: (error as { context?: { status?: number } }).context?.status === 503 ? 'not_configured' : 'failed', message: error.message }
+    if (!data || !Array.isArray((data as Extracted).results)) throw { code: 'invalid_json', message: 'unexpected shape' }
+    return data as Extracted
+  }
   const s = await getSample()
   if (!s) throw { code: 'not_granted', message: 'sample unavailable' }
   const data = await s.json<Extracted>(PROMPT, { images: [blob], modelTier: 'default', signal, cache: false })
