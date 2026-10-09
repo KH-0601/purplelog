@@ -61,7 +61,7 @@ export default function VetReport() {
       </div>
       <div className="card rep">
         <h3>
-          {dog.name}　{kg ? `${kg} kg` : ''}　{dog.breed ?? ''} {dog.sex ?? ''}
+          {dog.name}　{kg ? `${kg} kg` : ''}　{dog.breed ?? ''} {dog.sex && dog.sex !== 'unknown' ? t('settings.sexes.' + dog.sex) : ''}
         </h3>
         <div className="meta">
           {dog.diagnosis ? t('report.dx.' + dog.diagnosis, dog.diagnosis) : ''}
@@ -78,7 +78,7 @@ export default function VetReport() {
             <tr><td>{t('report.longest')}</td><td className="n">{longest ? fmtDur(longest) : t('report.unknown')}</td></tr>
             <tr><td>{t('report.medianInterval')}</td><td className="n">{medInt != null ? `${medInt} ${t('report.days')}` : '—'}</td></tr>
             <tr><td>{t('report.change90')}</td><td className="n">{change != null ? `${change > 0 ? '+' : ''}${change}%` : `${last90} / ${prev90}`}</td></tr>
-            <tr><td>{t('report.prnCount')}</td><td className="n">{prnLogs.length}{prnLogs.length ? ` (${Array.from(new Set(prnLogs.map((l) => t('meds.generics.' + l.generic, l.generic)))).join(', ')})` : ''}</td></tr>
+            <tr><td>{t('report.prnCount')}</td><td className="n">{prnLogs.length}{prnLogs.length > 0 && <div className="note">{Array.from(new Set(prnLogs.map((l) => t('meds.generics.' + l.generic, l.generic)))).join('・')}</div>}</td></tr>
             {planned > 0 && <tr><td>{t('meds.adherence')} (30d)</td><td className="n">{given} / {planned} ({Math.round((given / planned) * 100)}%)</td></tr>}
           </tbody>
         </table>
