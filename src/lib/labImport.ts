@@ -4,7 +4,7 @@
  * form still accepts a photo (kept on the device) and manual values.
  */
 import { currentBackend } from './cloud'
-import { supabase, uploadLabImage } from './supabase'
+import { invokeFunction, uploadLabImage } from './supabase'
 
 type SampleFn = ((input: string, opts?: Record<string, unknown>) => Promise<{ text: string }>) & {
   json<T>(input: string, opts?: Record<string, unknown>): Promise<T>
@@ -75,8 +75,8 @@ async function blobToBase64(blob: Blob): Promise<string> {
 export async function extractFromImage(blob: Blob, signal?: AbortSignal): Promise<Extracted> {
   if (currentBackend() === 'supabase') {
     const image = await blobToBase64(blob)
-    const { data, error } = await supabase().functions.invoke('lab-ocr', { body: { image, mime: blob.type || 'image/jpeg', prompt: PROMPT } })
-    if (error) throw { code: (error as { context?: { status?: number } }).context?.status === 503 ? 'not_configured' : 'failed', message: error.message }
+    const { data, error } = await invokeFunction<Extracted>('lab-ocr', { image, mime: blob.type || 'image/jpeg', prompt: PROMPT })
+    if (error) throw { code: error.status === 503 ? 'not_configured' : 'failed', message: error.message }
     if (!data || !Array.isArray((data as Extracted).results)) throw { code: 'invalid_json', message: 'unexpected shape' }
     return data as Extracted
   }

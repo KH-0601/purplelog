@@ -7,13 +7,14 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
 const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-5'
 
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' }
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token' }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (!API_KEY) return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }), { status: 503, headers: cors })
-  const auth = req.headers.get('Authorization') ?? ''
-  const sb = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } })
+  // The gateway checks the Authorization header (publishable key); the signed-in user's token comes in x-user-token.
+  const userJwt = req.headers.get('x-user-token') ?? (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  const sb = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: `Bearer ${userJwt}` } } })
   const { data: me } = await sb.auth.getUser()
   if (!me?.user) return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: cors })
   const { data: member } = await sb.from('members').select('user_id').eq('user_id', me.user.id).maybeSingle()

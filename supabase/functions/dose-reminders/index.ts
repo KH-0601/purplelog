@@ -10,6 +10,7 @@ const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY')!
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:koz2030@gmail.com'
 const REMIND_MIN = Number(Deno.env.get('REMIND_MIN') ?? '30')
+const CRON_SECRET = Deno.env.get('CRON_SECRET')
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 const sb = createClient(SUPABASE_URL, SERVICE_KEY)
@@ -32,7 +33,8 @@ function localIso(d: Date, tz: string) {
 /** Minutes between two local wall-clock strings (same tz). */
 const minutesBetween = (a: string, b: string) => (new Date(b + ':00Z').getTime() - new Date(a + ':00Z').getTime()) / 60000
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  if (CRON_SECRET && req.headers.get('x-cron-secret') !== CRON_SECRET) return new Response('unauthorized', { status: 401 })
   const { data: docs, error } = await sb.from('docs').select('tbl,id,body,deleted').in('tbl', ['dogs', 'medications', 'dosePlans', 'doseLogs']).eq('deleted', false)
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   const by = (t: string) => (docs as Doc[]).filter((d) => d.tbl === t).map((d) => d.body)

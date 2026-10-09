@@ -65,6 +65,23 @@ export async function joinHousehold(): Promise<{ ok: boolean; message?: string }
   return { ok: true }
 }
 
+/** Call an Edge Function. The gateway verifies the (public) publishable key; the user's own token travels in x-user-token and is checked inside the function. */
+export async function invokeFunction<T>(name: string, body: unknown): Promise<{ data: T | null; error: { message: string; status?: number } | null }> {
+  const session = await currentSession()
+  if (!session) return { data: null, error: { message: 'not signed in', status: 401 } }
+  const r = await fetch(`${URL}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', apikey: KEY, Authorization: `Bearer ${KEY}`, 'x-user-token': session.access_token },
+    body: JSON.stringify(body),
+  })
+  if (!r.ok) {
+    let message = r.statusText
+    try { message = ((await r.json()) as { error?: string }).error ?? message } catch { /* keep */ }
+    return { data: null, error: { message, status: r.status } }
+  }
+  return { data: (await r.json()) as T, error: null }
+}
+
 export async function uploadLabImage(blob: Blob, id: string): Promise<string | null> {
   const path = `${id}.jpg`
   const { error } = await supabase().storage.from('lab-images').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true })
