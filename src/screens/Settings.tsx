@@ -5,7 +5,6 @@ import { updateSettings, useDog, useDogs, useSettings } from '../lib/useData'
 import { useCloud } from '../lib/cloud'
 import { toGrid } from '../lib/weather'
 import { today } from '../lib/format'
-import { seedIfEmpty } from '../seed'
 import { SEX_OPTIONS } from './shared'
 import { requestNotifyPermission } from '../lib/alerts'
 
@@ -232,7 +231,6 @@ export default function Settings() {
         <h4>{t('settings.data')}</h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button className="btn sec" onClick={exportJson}>{t('settings.export')}</button>
-          <button className="btn sec" onClick={() => seedIfEmpty(true)}>{t('settings.reseed')}</button>
           <button className="btn danger" onClick={deleteAll}>{t('settings.deleteAll')}</button>
         </div>
       </div>
