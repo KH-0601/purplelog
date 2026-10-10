@@ -14,6 +14,8 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET')
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 const sb = createClient(SUPABASE_URL, SERVICE_KEY)
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token' }
 
 type Doc = { tbl: string; id: string; body: Record<string, unknown>; deleted: boolean }
 type Med = { id: string; dogId: string; generic: string; kind: string; endDate?: string; doses: { date: string; timesPerDay: number; mgPerDose?: number }[]; scheduleTimes?: string[] }
@@ -34,6 +36,29 @@ function localIso(d: Date, tz: string) {
 const minutesBetween = (a: string, b: string) => (new Date(b + ':00Z').getTime() - new Date(a + ':00Z').getTime()) / 60000
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  // Test mode: a signed-in member asks for an immediate test push to their own devices.
+  const userJwt = req.headers.get('x-user-token')
+  if (userJwt) {
+    const me = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: `Bearer ${userJwt}` } } })
+    const { data: u } = await me.auth.getUser()
+    if (!u?.user) return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: cors })
+    const { data: subs } = await sb.from('push_subscriptions').select('id,subscription').eq('user_id', u.user.id)
+    const payload = JSON.stringify({ title: 'テスト通知', body: 'この端末にプッシュ通知が届いています。投薬の予定時刻を過ぎると同じ形で届きます。', tag: 'purplelog-test', url: './' })
+    let ok = 0
+    const errors: string[] = []
+    for (const s of subs ?? []) {
+      try {
+        await webpush.sendNotification(s.subscription, payload)
+        ok++
+      } catch (e) {
+        const code = (e as { statusCode?: number }).statusCode
+        errors.push(String(code ?? (e as Error).message))
+        if (code === 404 || code === 410) await sb.from('push_subscriptions').delete().eq('id', s.id)
+      }
+    }
+    return new Response(JSON.stringify({ devices: subs?.length ?? 0, sent: ok, errors }), { headers: { ...cors, 'content-type': 'application/json' } })
+  }
   if (CRON_SECRET && req.headers.get('x-cron-secret') !== CRON_SECRET) return new Response('unauthorized', { status: 401 })
   const { data: docs, error } = await sb.from('docs').select('tbl,id,body,deleted').in('tbl', ['dogs', 'medications', 'dosePlans', 'doseLogs']).eq('deleted', false)
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })

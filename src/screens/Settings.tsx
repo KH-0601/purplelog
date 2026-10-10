@@ -9,6 +9,7 @@ import { SEX_OPTIONS } from './shared'
 import { requestNotifyPermission } from '../lib/alerts'
 import { pushState, subscribePush, unsubscribePush, type PushState } from '../lib/push'
 import { DOG_PALETTE, dogColorMap } from '../lib/dogColor'
+import { invokeFunction } from '../lib/supabase'
 
 export default function Settings() {
   const { t } = useTranslation()
@@ -241,7 +242,18 @@ export default function Settings() {
             <div className="note" style={{ marginBottom: 6 }}>{t('alert.pushState.' + push)}</div>
             {pushErr && <div className="note" style={{ color: 'var(--warn)', marginBottom: 6 }}>{pushErr}</div>}
             {push === 'not_subscribed' && cloud.userId && <button className="btn sm" onClick={async () => { setPushErr(null); try { setPush(await subscribePush(cloud.userId!)) } catch (e) { setPushErr(t('alert.pushError') + ' ' + String((e as Error)?.message ?? e)) } }}>{t('alert.pushOn')}</button>}
-            {push === 'subscribed' && <button className="btn sec sm" onClick={async () => { await unsubscribePush(); setPush(await pushState()) }}>{t('alert.pushOff')}</button>}
+            {push === 'subscribed' && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn sm" onClick={async () => {
+                  setPushErr(null)
+                  const { data, error } = await invokeFunction<{ devices: number; sent: number; errors: string[] }>('dose-reminders', { test: true })
+                  if (error) setPushErr(t('alert.pushError') + ' ' + error.message)
+                  else if (!data || data.devices === 0) setPushErr(t('alert.pushTestNone'))
+                  else setPushErr(t('alert.pushTestSent', { sent: data.sent, devices: data.devices }) + (data.errors.length ? ' [' + data.errors.join(', ') + ']' : ''))
+                }}>{t('alert.pushTest')}</button>
+                <button className="btn sec sm" onClick={async () => { await unsubscribePush(); setPush(await pushState()) }}>{t('alert.pushOff')}</button>
+              </div>
+            )}
           </div>
         )}
       </div>
