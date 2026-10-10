@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import PushNudge from './PushNudge'
 import { db, uid, type DoseLog, type DosePlan, type Medication } from '../db'
 import { latestWeight, useDog, useDoseLogs, useDosePlans, useEvents, useLabs, useMeds, useMonthly } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
@@ -91,6 +92,7 @@ export default function Home() {
 
   return (
     <>
+      <PushNudge />
       <div className="card">
         <div className="kpi">
           <div>

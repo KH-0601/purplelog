@@ -25,6 +25,7 @@ export default function Settings() {
   const [planDraft, setPlanDraft] = useState<EmergencyPlan | null>(null)
   const [notifyState, setNotifyState] = useState<NotificationPermission | 'unsupported'>(() => ('Notification' in window ? Notification.permission : 'unsupported'))
   const [push, setPush] = useState<PushState | null>(null)
+  const [pushErr, setPushErr] = useState<string | null>(null)
   useEffect(() => {
     if (cloud.backend === 'supabase') pushState().then(setPush)
   }, [cloud.backend, cloud.status])
@@ -238,7 +239,8 @@ export default function Settings() {
           <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
             <h4>{t('alert.push')}</h4>
             <div className="note" style={{ marginBottom: 6 }}>{t('alert.pushState.' + push)}</div>
-            {push === 'not_subscribed' && cloud.userId && <button className="btn sm" onClick={async () => setPush(await subscribePush(cloud.userId!).catch((): PushState => 'not_subscribed'))}>{t('alert.pushOn')}</button>}
+            {pushErr && <div className="note" style={{ color: 'var(--warn)', marginBottom: 6 }}>{pushErr}</div>}
+            {push === 'not_subscribed' && cloud.userId && <button className="btn sm" onClick={async () => { setPushErr(null); try { setPush(await subscribePush(cloud.userId!)) } catch (e) { setPushErr(t('alert.pushError') + ' ' + String((e as Error)?.message ?? e)) } }}>{t('alert.pushOn')}</button>}
             {push === 'subscribed' && <button className="btn sec sm" onClick={async () => { await unsubscribePush(); setPush(await pushState()) }}>{t('alert.pushOff')}</button>}
           </div>
         )}
