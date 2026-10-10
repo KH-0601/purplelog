@@ -11,6 +11,9 @@ import { pushState, subscribePush, unsubscribePush, type PushState } from '../li
 import { DOG_PALETTE, dogColorMap } from '../lib/dogColor'
 import { invokeFunction } from '../lib/supabase'
 import DogPhoto from './DogPhoto'
+import { GENERICS } from './shared'
+import { useDrugs } from '../lib/useData'
+import { currentUserId } from '../lib/cloud'
 
 export default function Settings() {
   const { t } = useTranslation()
@@ -28,6 +31,15 @@ export default function Settings() {
   const [notifyState, setNotifyState] = useState<NotificationPermission | 'unsupported'>(() => ('Notification' in window ? Notification.permission : 'unsupported'))
   const [push, setPush] = useState<PushState | null>(null)
   const [pushErr, setPushErr] = useState<string | null>(null)
+  const drugs = useDrugs()
+  const [newDrug, setNewDrug] = useState('')
+  async function addDrug() {
+    const name = newDrug.trim()
+    if (!name) return
+    if ((GENERICS as readonly string[]).includes(name) || drugs.some((d) => d.name === name)) { setNewDrug(''); return }
+    await db.drugs.add({ id: uid(), name, createdAt: new Date().toISOString(), by: currentUserId() ?? undefined })
+    setNewDrug('')
+  }
   useEffect(() => {
     if (cloud.backend === 'supabase') pushState().then(setPush)
   }, [cloud.backend, cloud.status])
@@ -263,6 +275,23 @@ export default function Settings() {
             )}
           </div>
         )}
+      </div>
+      <div className="card">
+        <h4>{t('settings.drugs')}</h4>
+        <div className="note" style={{ marginBottom: 6 }}>{t('settings.drugsIntro')}</div>
+        <div className="chips" style={{ marginBottom: 8 }}>
+          {GENERICS.map((g) => <span key={g} className="chip-btn" style={{ opacity: 0.7 }}>{t('meds.generics.' + g)}</span>)}
+        </div>
+        {drugs.map((d) => (
+          <div className="row" key={d.id}>
+            <span className="grow"><b>{d.name}</b></span>
+            <button className="btn sec sm" onClick={() => confirm(t('settings.drugDeleteConfirm', { name: d.name })) && db.drugs.delete(d.id)}>{t('btn.delete')}</button>
+          </div>
+        ))}
+        <div className="field" style={{ marginTop: 6 }}>
+          <input value={newDrug} placeholder={t('settings.drugName')} onChange={(e) => setNewDrug(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addDrug()} />
+          <button className="btn sm" onClick={addDrug} disabled={!newDrug.trim()}>＋ {t('settings.drugAdd')}</button>
+        </div>
       </div>
       <div className="card">
         <h4>{t('settings.consent')}</h4>

@@ -9,7 +9,7 @@ import { useDog } from '../lib/useData'
 import { fetchHourly, snapshotAt, toGrid } from '../lib/weather'
 import { attachWeather } from '../lib/autoWeather'
 import { addDays, nowLocalISO } from '../lib/format'
-import { EventTag, GENERICS, SEIZURE_TYPES, UNUSUAL_ITEMS } from './shared'
+import { EventTag, SEIZURE_TYPES, UNUSUAL_ITEMS, useDrugOptions } from './shared'
 
 export default function EventDetail() {
   const { t } = useTranslation()
@@ -17,6 +17,7 @@ export default function EventDetail() {
   const [params] = useSearchParams()
   const nav = useNavigate()
   const dog = useDog()
+  const drugOptions = useDrugOptions()
   const isNew = id === 'new'
   const stored = useLiveQuery(() => (id && !isNew ? db.events.get(id) : undefined), [id, isNew])
   const [e, setE] = useState<Event | undefined>()
@@ -169,9 +170,9 @@ export default function EventDetail() {
               <span className="k">{t('event.rescue')}</span>
               <select value={e.rescueMed?.generic ?? ''} onChange={(ev) => set({ rescueMed: ev.target.value ? { generic: ev.target.value, time: e.rescueMed?.time ?? e.start } : undefined })}>
                 <option value="">—</option>
-                {GENERICS.map((g) => (
-                  <option key={g} value={g}>
-                    {t('meds.generics.' + g)}
+                {drugOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
                   </option>
                 ))}
               </select>

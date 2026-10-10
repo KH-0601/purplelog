@@ -129,6 +129,15 @@ export interface DoseLog {
   by?: string
 }
 
+/** A drug name added by the household (beyond the built-in list). `name` is used as the generic key. */
+export interface Drug {
+  id: string
+  name: string
+  note?: string
+  createdAt: string
+  by?: string
+}
+
 /** A planned (usually as-needed) dose: when it should be given. Done when linked to a DoseLog. */
 export interface DosePlan {
   id: string
@@ -206,6 +215,7 @@ export class PurpleDB extends Dexie {
   refRanges!: Table<ReferenceRange, string>
   doseLogs!: Table<DoseLog, string>
   dosePlans!: Table<DosePlan, string>
+  drugs!: Table<Drug, string>
   weatherDaily!: Table<WeatherDaily, string>
   settings!: Table<Settings, string>
   constructor() {
@@ -232,6 +242,7 @@ export class PurpleDB extends Dexie {
       })
     this.version(3).stores({ refs: null })
     this.version(4).stores({ dosePlans: 'id, dogId, time, [dogId+time]' })
+    this.version(5).stores({ drugs: 'id, name' })
   }
 }
 export const db = new PurpleDB()
@@ -239,5 +250,5 @@ export const db = new PurpleDB()
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 
 /** Tables mirrored to the shared database when sharing is available. */
-export const SHARED_TABLES = ['dogs', 'events', 'medications', 'labs', 'refRanges', 'doseLogs', 'dosePlans', 'monthly'] as const
+export const SHARED_TABLES = ['dogs', 'events', 'medications', 'labs', 'refRanges', 'doseLogs', 'dosePlans', 'monthly', 'drugs'] as const
 export type SharedTable = (typeof SHARED_TABLES)[number]

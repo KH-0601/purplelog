@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useDrugs } from '../lib/useData'
 import type { TFunction } from 'i18next'
 import type { Event, Medication } from '../db'
 
@@ -36,6 +38,15 @@ export const MONITOR_ANALYTES = ['T4', 'FT4', 'TSH', 'ALT', 'ALP']
 
 /** Drugs selectable for new records (2026-10-09: the four the owners plan to use). */
 export const GENERICS = ['phenobarbital', 'zonisamide', 'levetiracetam', 'gabapentin'] as const
+
+/** Built-in drugs plus the household's own list (Settings), as select options. */
+export function useDrugOptions(): { value: string; label: string }[] {
+  const { t } = useTranslation()
+  const custom = useDrugs()
+  const builtIn = GENERICS.map((g) => ({ value: g as string, label: t('meds.generics.' + g) }))
+  const extra = custom.filter((d) => !(GENERICS as readonly string[]).includes(d.name)).map((d) => ({ value: d.name, label: d.name }))
+  return [...builtIn, ...extra]
+}
 
 export const UNUSUAL_ITEMS = ['mania', 'pica', 'elimination', 'ataxia', 'weakness', 'lethargy', 'appetite_down', 'appetite_up', 'weight', 'skin', 'pacing', 'vomiting', 'hyperactive', 'eye_twitch', 'urination', 'other']
 

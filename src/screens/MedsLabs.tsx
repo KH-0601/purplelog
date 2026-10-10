@@ -5,7 +5,7 @@ import { latestWeight, useDog, useLabs, useMeds, useRefs } from '../lib/useData'
 import { classifyTiming, ruleFor, type TimingClass } from '../lib/monitoring'
 import { findRange, normalize } from '../lib/normalize'
 import { fmtDate, nowLocalISO, today } from '../lib/format'
-import { ANALYTES, DRUG_ANALYTES, GENERICS, defaultSchedule } from './shared'
+import { ANALYTES, DRUG_ANALYTES, defaultSchedule, useDrugOptions } from './shared'
 import LabPhotoImport from './LabPhotoImport'
 import { labImageUrl } from '../lib/supabase'
 import { normaliseUnit, uploadImage, type Extracted } from '../lib/labImport'
@@ -42,6 +42,7 @@ const analyteGeneric: Record<string, string> = { PB: 'phenobarbital', KBr: 'pota
 export default function MedsLabs() {
   const { t, i18n } = useTranslation()
   const dog = useDog()
+  const drugOptions = useDrugOptions()
   const meds = useMeds(dog?.id)
   const labs = useLabs(dog?.id)
   const refs = useRefs()
@@ -180,7 +181,7 @@ export default function MedsLabs() {
         {addingMed ? (
           <div className="wx" style={{ fontFamily: 'inherit', marginTop: 6 }}>
             <div className="field"><span className="k">{t('meds.analyte')}</span>
-              <select value={newMed.generic} onChange={(e) => setNewMed({ ...newMed, generic: e.target.value })}>{GENERICS.map((g) => <option key={g} value={g}>{t('meds.generics.' + g)}</option>)}</select></div>
+              <select value={newMed.generic} onChange={(e) => setNewMed({ ...newMed, generic: e.target.value })}>{drugOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
             <div className="field"><span className="k">{t('event.kind')}</span>
               <select value={newMed.kind} onChange={(e) => setNewMed({ ...newMed, kind: e.target.value })}>{['maintenance', 'rescue', 'trial'].map((k) => <option key={k} value={k}>{t('meds.kinds.' + k)}</option>)}</select></div>
             <div className="field"><span className="k">{t('meds.start')}</span><input type="date" value={newMed.startDate} onChange={(e) => setNewMed({ ...newMed, startDate: e.target.value })} /></div>

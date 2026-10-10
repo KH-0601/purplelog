@@ -5,7 +5,7 @@ import { db, uid, type DoseLog, type DosePlan } from '../db'
 import { useDog, useMeds } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
 import { nowLocalISO } from '../lib/format'
-import { GENERICS, currentDose } from './shared'
+import { GENERICS, currentDose, useDrugOptions } from './shared'
 
 type Tab = 'seizure' | 'dose' | 'plan'
 
@@ -16,6 +16,7 @@ export default function AddRecord() {
   const [params] = useSearchParams()
   const dog = useDog()
   const meds = useMeds(dog?.id)
+  const drugOptions = useDrugOptions()
   const [tab, setTab] = useState<Tab>(((params.get('tab') as Tab) === 'seizure' ? 'dose' : (params.get('tab') as Tab)) || 'dose')
 
   // ---- dose form
@@ -109,7 +110,7 @@ export default function AddRecord() {
                   </optgroup>
                 )}
                 <optgroup label={t('add.generics')}>
-                  {GENERICS.map((g) => <option key={g} value={`g:${g}`}>{t('meds.generics.' + g)}</option>)}
+                  {drugOptions.map((o) => <option key={o.value} value={`g:${o.value}`}>{o.label}</option>)}
                   <option value="other">{t('add.other')}</option>
                 </optgroup>
               </select>
@@ -151,7 +152,7 @@ export default function AddRecord() {
                   </optgroup>
                 )}
                 <optgroup label={t('add.generics')}>
-                  {GENERICS.map((g) => <option key={g} value={`g:${g}`}>{t('meds.generics.' + g)}</option>)}
+                  {drugOptions.map((o) => <option key={o.value} value={`g:${o.value}`}>{o.label}</option>)}
                   <option value="other">{t('add.other')}</option>
                 </optgroup>
               </select>
