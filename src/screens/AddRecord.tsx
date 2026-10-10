@@ -68,7 +68,7 @@ export default function AddRecord() {
     }
     await db.events.add(e)
     attachWeatherSoon(e.id)
-    nav(`/event/${e.id}`, { replace: true })
+    nav('/timeline', { replace: true })
   }
 
   async function saveDose() {
