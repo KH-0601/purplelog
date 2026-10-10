@@ -281,6 +281,7 @@ export default function Settings() {
           <button className="btn danger" onClick={deleteAll}>{t('settings.deleteAll')}</button>
         </div>
       </div>
+      <div className="note" style={{ textAlign: 'center', padding: '6px 0 12px' }}>{t('settings.version')} {__BUILD__}</div>
     </>
   )
 }
