@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import PushNudge from './PushNudge'
+import DogPhoto from './DogPhoto'
+import { dogColorMap } from '../lib/dogColor'
+import { useDogs } from '../lib/useData'
 import { db, uid, type DoseLog, type DosePlan, type Medication } from '../db'
 import { latestWeight, useDog, useDoseLogs, useDosePlans, useEvents, useLabs, useMeds, useMonthly } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
@@ -15,6 +18,7 @@ export default function Home() {
   const { t, i18n } = useTranslation()
   const nav = useNavigate()
   const dog = useDog()
+  const dogs = useDogs()
   const events = useEvents(dog?.id)
   const monthly = useMonthly(dog?.id)
   const meds = useMeds(dog?.id)
@@ -94,6 +98,15 @@ export default function Home() {
     <>
       <PushNudge />
       <div className="card">
+        {dog && (
+          <div className="dogheader">
+            <DogPhoto dog={dog} color={dogColorMap(dogs)[dog.id]} size={76} />
+            <div className="grow">
+              <div className="dogname" style={{ color: dogColorMap(dogs)[dog.id] }}>{dog.name}</div>
+              <div className="note">{[dog.breed, kg ? `${kg} kg` : null].filter(Boolean).join('・')}</div>
+            </div>
+          </div>
+        )}
         <div className="kpi">
           <div>
             <div className="n">

@@ -21,6 +21,8 @@ export interface Dog {
   breed?: string
   /** display colour (hex) used for the switcher tabs and alerts */
   color?: string
+  /** small JPEG data URL shown on Home */
+  photo?: string
   diagnosis?: string
   diagnosisDate?: string
   regionCode?: string

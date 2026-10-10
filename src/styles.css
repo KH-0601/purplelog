@@ -9,6 +9,12 @@ a{color:var(--accent-ink);text-decoration:none}
 .chip{font-size:12px;background:var(--accent-soft);color:var(--accent-ink);border-radius:999px;padding:3px 10px;border:0}
 .nudge{border:2px solid var(--unusual);background:var(--unusual-soft)}
 .nudge h4{color:var(--ink);font-size:14px;font-weight:700}
+.dogheader{display:flex;gap:12px;align-items:center;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--rule)}
+.dogname{font-size:22px;font-weight:800;line-height:1.2}
+.dogphoto{position:relative;border-radius:50%;border:3px solid var(--rule);background:var(--accent-soft);padding:0;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer}
+.dogphoto img{width:100%;height:100%;object-fit:cover;display:block}
+.dogphoto .ph{font-weight:800}
+.dogphoto .cam{position:absolute;right:-2px;bottom:-2px;font-size:14px;background:#fff;border-radius:50%;padding:2px 3px;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .dogbar{display:flex;gap:6px;align-items:stretch;padding:0 14px 8px;position:sticky;top:44px;background:var(--bg);z-index:5}
 .dogtab{flex:1;min-height:44px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);font-size:16px;font-weight:700;color:var(--muted);padding:6px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dogtab.on{background:var(--accent);border-color:var(--accent);color:#fff}

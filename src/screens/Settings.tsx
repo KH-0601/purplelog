@@ -10,6 +10,7 @@ import { requestNotifyPermission } from '../lib/alerts'
 import { pushState, subscribePush, unsubscribePush, type PushState } from '../lib/push'
 import { DOG_PALETTE, dogColorMap } from '../lib/dogColor'
 import { invokeFunction } from '../lib/supabase'
+import DogPhoto from './DogPhoto'
 
 export default function Settings() {
   const { t } = useTranslation()
@@ -172,6 +173,12 @@ export default function Settings() {
           <div className="field"><span className="k">{t('settings.sex')}</span>
             <select value={view.sex ?? 'unknown'} onChange={(e) => patchDog({ sex: e.target.value })}>{SEX_OPTIONS.map((x) => <option key={x} value={x}>{t('settings.sexes.' + x)}</option>)}</select></div>
           <div className="field"><span className="k">{t('settings.breed')}</span><input value={view.breed ?? ''} onChange={(e) => patchDog({ breed: e.target.value })} /></div>
+          <div className="field"><span className="k">{t('settings.photo')}</span>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <DogPhoto dog={dog} color={colorOf} size={64} />
+              {dog.photo && <button className="btn sec sm" onClick={() => db.dogs.update(dog.id, { photo: undefined })}>{t('settings.photoRemove')}</button>}
+            </div>
+          </div>
           <div className="field"><span className="k">{t('settings.color')}</span>
             <div className="swatches">
               {DOG_PALETTE.map((c) => <button key={c} className={'swatch' + (colorOf === c ? ' on' : '')} style={{ background: c }} aria-label={c} onClick={() => db.dogs.update(dog.id, { color: c })} />)}
