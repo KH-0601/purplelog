@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { db, uid, type PlanAction } from '../db'
 import { useDog } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
+import { attachWeatherSoon } from '../lib/autoWeather'
 import { nowLocalISO } from '../lib/format'
 
 export default function Seizure() {
@@ -86,6 +87,7 @@ export default function Seizure() {
       videoBlob: blob,
       by: currentUserId() ?? undefined,
     })
+    attachWeatherSoon(id)
     nav(`/event/${id}`, { replace: true })
   }
 
@@ -93,6 +95,7 @@ export default function Seizure() {
     if (!dog) return
     const id = uid()
     await db.events.add({ id, dogId: dog.id, kind: 'seizure', start: nowLocalISO(), tz: dog.tz, count: 1, timeUnknown: true, by: currentUserId() ?? undefined })
+    attachWeatherSoon(id)
     nav(`/event/${id}`, { replace: true })
   }
 

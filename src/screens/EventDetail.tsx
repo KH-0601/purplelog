@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type Event } from '../db'
 import { useDog } from '../lib/useData'
 import { fetchHourly, snapshotAt, toGrid } from '../lib/weather'
+import { attachWeather } from '../lib/autoWeather'
 import { addDays, fmtDur } from '../lib/format'
 import { EventTag, GENERICS, SEIZURE_TYPES, UNUSUAL_ITEMS } from './shared'
 
@@ -19,6 +20,26 @@ export default function EventDetail() {
   useEffect(() => {
     if (stored && !e) setE(stored)
   }, [stored, e])
+  // weather attached in the background (auto fetch) → merge into the draft so saving keeps it
+  useEffect(() => {
+    if (stored?.weather && e && !e.weather) setE({ ...e, weather: stored.weather })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stored?.weather])
+  // fetch weather automatically when the record has none yet (no button needed)
+  const autoTried = useRef<string | null>(null)
+  useEffect(() => {
+    if (!e || e.weather || dog?.gridLat == null || autoTried.current === e.id) return
+    autoTried.current = e.id
+    setBusy(true)
+    attachWeather(e.id)
+      .then(async () => {
+        const cur = await db.events.get(e.id)
+        if (cur?.weather) setE((x) => (x && !x.weather ? { ...x, weather: cur.weather } : x))
+      })
+      .catch(() => undefined)
+      .finally(() => setBusy(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [e?.id, e?.weather, dog?.gridLat])
   const videoUrl = useMemo(() => (e?.videoBlob ? URL.createObjectURL(e.videoBlob) : e?.videoUrl), [e?.videoBlob, e?.videoUrl])
   if (!e || !dog) return null
 
@@ -161,7 +182,7 @@ export default function EventDetail() {
           </div>
         ) : dog.gridLat != null ? (
           <button className="btn sec sm" onClick={fetchWx} disabled={busy}>
-            {t('event.fetchWeather')}
+            {busy ? t('event.fetchingWeather') : t('event.fetchWeather')}
           </button>
         ) : (
           <div className="note">{t('event.noGrid')}</div>

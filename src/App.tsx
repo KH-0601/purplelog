@@ -5,6 +5,7 @@ import { db, uid } from './db'
 import { updateSettings, useDog, useDogs, useSettings } from './lib/useData'
 import { dogColorMap } from './lib/dogColor'
 import { currentUserId, useCloud } from './lib/cloud'
+import { attachWeatherSoon, backfillWeather } from './lib/autoWeather'
 import { nowLocalISO } from './lib/format'
 import Home from './screens/Home'
 import Seizure from './screens/Seizure'
@@ -81,8 +82,13 @@ export default function App() {
     if (!dog) return
     const id = uid()
     await db.events.add({ id, dogId: dog.id, kind: 'unusual', start: nowLocalISO(), tz: dog.tz, unusualItems: [], by: currentUserId() ?? undefined })
+    attachWeatherSoon(id)
     nav(`/event/${id}`)
   }
+
+  useEffect(() => {
+    if (cloud.status === 'ready' || cloud.status === 'local') { const t = setTimeout(() => void backfillWeather(), 3000); return () => clearTimeout(t) }
+  }, [cloud.status])
 
   const cloudDot = cloud.status === 'ready' ? '●' : cloud.status === 'syncing' || cloud.status === 'init' ? '…' : cloud.status === 'readonly' || cloud.status === 'error' ? '!' : '○'
   const cloudCls = cloud.status === 'ready' ? 'm' : cloud.status === 'readonly' || cloud.status === 'error' ? 'w' : 'g'

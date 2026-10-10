@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { db, uid, type DoseLog, type DosePlan, type Event } from '../db'
 import { useDog, useMeds } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
+import { attachWeatherSoon } from '../lib/autoWeather'
 import { nowLocalISO, today } from '../lib/format'
 import { GENERICS, SEIZURE_TYPES, UNUSUAL_ITEMS, currentDose } from './shared'
 
@@ -66,6 +67,7 @@ export default function AddRecord() {
       updatedAt: new Date().toISOString(),
     }
     await db.events.add(e)
+    attachWeatherSoon(e.id)
     nav(`/event/${e.id}`, { replace: true })
   }
 

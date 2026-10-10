@@ -14,7 +14,7 @@ const ja = {
     fiveMin: '5分を超えました。主治医の指示に従ってください', screenNote: '画面は消えません。ほかのアプリに切り替えると録画が止まります', videoOpt: '録画オプション', on: 'オン', off: 'オフ', cameraStart: '開始と同時にカメラが起動します',
   },
   event: {
-    title: 'できごとの詳細', kind: '種別', seizure: '発作', unusual: 'いつもと違う', other: 'その他', start: '開始', end: '終了', duration: '持続', count: '回数', type: '発作の型', consciousness: '意識', recovery: '回復まで（分）', aura: '前兆', rescue: '救急薬', note: 'メモ', video: '動画', weather: 'この時刻の気象（自動）', fetchWeather: '気象を取得', noGrid: '設定で地域を登録すると気象を取得できます',
+    title: 'できごとの詳細', kind: '種別', seizure: '発作', unusual: 'いつもと違う', other: 'その他', start: '開始', end: '終了', duration: '持続', count: '回数', type: '発作の型', consciousness: '意識', recovery: '回復まで（分）', aura: '前兆', rescue: '救急薬', note: 'メモ', video: '動画', weather: 'この時刻の気象（自動）', fetchingWeather: '気象を取得中…', fetchWeather: '気象を取得', noGrid: '設定で地域を登録すると気象を取得できます',
     types: { generalized_tonic_clonic: '全身がかたまり けいれん', focal: '体の一部だけ', focal_behavioral: 'ぼんやり・よだれ', focal_to_generalized: '一部から全身へ', unknown: 'わからない' },
     cons: { lost: 'なかった', kept: 'あった', unknown: 'わからない' },
     items: { mania: '躁状態', pica: '誤食', elimination: '排泄異常', ataxia: 'ふらつき', weakness: '足の力がない', lethargy: '元気がない', appetite_down: '食欲の低下', appetite_up: '食欲の増加', weight: '体重の変化', skin: '皮膚・被毛の変化', pacing: '徘徊', vomiting: '嘔吐', hyperactive: 'ハイテンション', eye_twitch: '目の症状', urination: '排尿の異常', other: 'その他' },
@@ -77,7 +77,7 @@ const en: typeof ja = {
     fiveMin: 'Over 5 minutes. Follow your veterinarian’s instructions', screenNote: 'The screen stays on. Switching apps stops the video', videoOpt: 'Video option', on: 'on', off: 'off', cameraStart: 'Camera starts with the timer',
   },
   event: {
-    title: 'Event details', kind: 'Kind', seizure: 'Seizure', unusual: 'Not normal', other: 'Other', start: 'Start', end: 'End', duration: 'Duration', count: 'Count', type: 'Seizure type', consciousness: 'Consciousness', recovery: 'Recovery (min)', aura: 'Warning signs', rescue: 'Rescue medication', note: 'Notes', video: 'Video', weather: 'Weather at this time (automatic)', fetchWeather: 'Fetch weather', noGrid: 'Set a region in Settings to fetch weather',
+    title: 'Event details', kind: 'Kind', seizure: 'Seizure', unusual: 'Not normal', other: 'Other', start: 'Start', end: 'End', duration: 'Duration', count: 'Count', type: 'Seizure type', consciousness: 'Consciousness', recovery: 'Recovery (min)', aura: 'Warning signs', rescue: 'Rescue medication', note: 'Notes', video: 'Video', weather: 'Weather at this time (automatic)', fetchingWeather: 'Fetching weather…', fetchWeather: 'Fetch weather', noGrid: 'Set a region in Settings to fetch weather',
     types: { generalized_tonic_clonic: 'Whole body stiff, convulsing', focal: 'One part of the body', focal_behavioral: 'Dazed, drooling', focal_to_generalized: 'Started in one part, then whole body', unknown: 'Not sure' },
     cons: { lost: 'lost', kept: 'kept', unknown: 'not sure' },
     items: { mania: 'Manic', pica: 'Ate something odd', elimination: 'Elimination problem', ataxia: 'Wobbly', weakness: 'Weak legs', lethargy: 'Lethargic', appetite_down: 'Less appetite', appetite_up: 'More appetite', weight: 'Weight change', skin: 'Skin / coat change', pacing: 'Pacing', vomiting: 'Vomiting', hyperactive: 'Hyperactive', eye_twitch: 'Eye symptoms', urination: 'Urination problem', other: 'Other' },
