@@ -22,7 +22,7 @@ const ja = {
   },
   timeline: { title: 'タイムライン', cluster: '群発エピソード', seizures: '回', hours: '時間', doseChange: '投薬変更', doseLog: '投薬', prnLog: '頓服', lab: '検査', weight: '体重', unusualNear: 'この検査の前後30日の「いつもと違う日」', none: 'なし', monthly: '月次記録（日付なし）', showDoses: '投薬の記録を表示' },
   meds: {
-    title: '投薬と検査', current: '現在の投薬', history: '変更履歴', change: '変更する', labs: '血中濃度・検査', addLab: '検査を記録する', analyte: '項目', value: '値', unit: '単位', date: '採血日時', lastDose: '最終投与', hoursSince: '時間前', timing: 'タイミング',
+    title: '投薬と検査', editLab: '修正', deleteLabConfirm: '{{date}} の検査結果を削除します。よろしいですか？', current: '現在の投薬', history: '変更履歴', change: '変更する', labs: '血中濃度・検査', addLab: '検査を記録する', analyte: '項目', value: '値', unit: '単位', date: '採血日時', lastDose: '最終投与', hoursSince: '時間前', timing: 'タイミング',
     trough: '次回投与前（トラフ）', post_dose: '投与後', not_applicable: '（タイミング不問）', unknown: '不明', sameAsPrev: '前回と一致', diffFromPrev: '前回と採血タイミングが異なります',
     troughNote: '抗てんかん薬の血中濃度は、毎回同じタイミング（次の投薬直前）で採血した値で比較します',
     ref: '基準', noWarn: '基準範囲はこの検査機関の値。低くても警告は出しません', normalized: '標準化: 0が基準範囲の下限、1が上限', weight: '体重', mgkg: 'mg/kg', perDay: '回/日', mgPerDose: '1回量 (mg)', reason: '理由', start: '開始日',
@@ -85,7 +85,7 @@ const en: typeof ja = {
   },
   timeline: { title: 'Timeline', cluster: 'Cluster episode', seizures: 'seizures', hours: 'h', doseChange: 'Dose change', doseLog: 'Dose given', prnLog: 'As-needed', lab: 'Lab', weight: 'Weight', unusualNear: '“Not normal” days within 30 days of this lab', none: 'none', monthly: 'Monthly records (no dates)', showDoses: 'Show doses given' },
   meds: {
-    title: 'Medication & labs', current: 'Current medication', history: 'Changes', change: 'Change', labs: 'Serum levels & labs', addLab: 'Add lab result', analyte: 'Analyte', value: 'Value', unit: 'Unit', date: 'Sampling time', lastDose: 'Last dose', hoursSince: 'h ago', timing: 'Timing',
+    title: 'Medication & labs', editLab: 'Edit', deleteLabConfirm: 'Delete the lab results of {{date}}?', current: 'Current medication', history: 'Changes', change: 'Change', labs: 'Serum levels & labs', addLab: 'Add lab result', analyte: 'Analyte', value: 'Value', unit: 'Unit', date: 'Sampling time', lastDose: 'Last dose', hoursSince: 'h ago', timing: 'Timing',
     trough: 'Before next dose (trough)', post_dose: 'Post-dose', not_applicable: '(timing not critical)', unknown: 'unknown', sameAsPrev: 'same as previous', diffFromPrev: 'Timing differs from the previous sample',
     troughNote: 'Serum levels are compared on samples taken at the same time each visit (just before the next dose)',
     ref: 'Ref', noWarn: 'Reference ranges are those of this laboratory. Low values do not trigger alerts', normalized: 'Normalized: 0 = lower limit, 1 = upper limit', weight: 'Weight', mgkg: 'mg/kg', perDay: 'per day', mgPerDose: 'mg per dose', reason: 'Reason', start: 'Start',

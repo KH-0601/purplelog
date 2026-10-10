@@ -9,9 +9,12 @@ import { ANALYTES, DRUG_ANALYTES, defaultSchedule, useDrugOptions } from './shar
 import LabPhotoImport from './LabPhotoImport'
 import { labImageUrl } from '../lib/supabase'
 import { normaliseUnit, uploadImage, type Extracted } from '../lib/labImport'
-import { useCloud } from '../lib/cloud'
+import { currentUserId, useCloud } from '../lib/cloud'
 
 /** Small thumbnail of a lab report; opens the full image. */
+/** Laboratory used by the household unless another name is typed (set 2026-10-10). */
+const DEFAULT_LAB = '富士フイルムVETシステムズ'
+
 function LabThumb({ lab }: { lab: Lab }) {
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
@@ -51,7 +54,8 @@ export default function MedsLabs() {
   const [addingMed, setAddingMed] = useState(false)
   const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2' })
   const [addingLab, setAddingLab] = useState(false)
-  const [lab, setLab] = useState<{ datetime: string; lastDoseAt: string; labName: string; values: Record<string, string> }>({ datetime: nowLocalISO(), lastDoseAt: '', labName: '', values: {} })
+  const [editingLab, setEditingLab] = useState<Lab | null>(null)
+  const [lab, setLab] = useState<{ datetime: string; lastDoseAt: string; labName: string; values: Record<string, string> }>({ datetime: nowLocalISO(), lastDoseAt: '', labName: DEFAULT_LAB, values: {} })
   const [editRefs, setEditRefs] = useState(false)
   const [labImage, setLabImage] = useState<Blob | null>(null)
   const [extractedRanges, setExtractedRanges] = useState<{ analyte: string; low: number; high: number; unit: string }[]>([])
@@ -76,14 +80,43 @@ export default function MedsLabs() {
   async function saveLab() {
     const results = ANALYTES.filter((a) => lab.values[a.code]).map((a) => ({ analyte: a.code, value: parseFloat(lab.values[a.code]) || 0, valueText: /^[\d.]+$/.test(lab.values[a.code]) ? null : lab.values[a.code], unit: a.unit }))
     const hours = lab.lastDoseAt ? +(((new Date(lab.datetime).getTime() - new Date(lab.lastDoseAt).getTime()) / 3600000).toFixed(1)) : undefined
-    const imageAssetId = labImage ? (await uploadImage(labImage)) ?? undefined : undefined
-    const l: Lab = { id: uid(), dogId: dog!.id, datetime: lab.datetime, labName: lab.labName, lastDoseAt: lab.lastDoseAt || undefined, hoursSinceDose: hours, results, note: labNote || undefined, imageAssetId, imageBlob: labImage ?? undefined, extracted: didExtract || undefined }
-    await db.labs.add(l)
+    const imageAssetId = labImage ? (await uploadImage(labImage)) ?? undefined : editingLab?.imageAssetId
+    // keep results for analytes this form does not show (e.g. extra items read from a report)
+    const keep = (editingLab?.results ?? []).filter((r) => !ANALYTES.some((a) => a.code === r.analyte))
+    const l: Lab = { ...(editingLab ?? {}), id: editingLab?.id ?? uid(), dogId: dog!.id, datetime: lab.datetime, labName: lab.labName, lastDoseAt: lab.lastDoseAt || undefined, hoursSinceDose: hours, results: [...results, ...keep], note: labNote || undefined, imageAssetId, imageBlob: labImage ?? editingLab?.imageBlob, extracted: didExtract || editingLab?.extracted || undefined, by: editingLab?.by ?? currentUserId() ?? undefined }
+    await db.labs.put(l)
     setAddingLab(false)
-    setLab({ datetime: nowLocalISO(), lastDoseAt: '', labName: '', values: {} })
+    setEditingLab(null)
+    setLab({ datetime: nowLocalISO(), lastDoseAt: '', labName: DEFAULT_LAB, values: {} })
     setLabImage(null)
     setExtractedRanges([])
     setLabNote('')
+    setDidExtract(false)
+  }
+  function startEditLab(l: Lab) {
+    const values: Record<string, string> = {}
+    for (const r of l.results) values[r.analyte] = r.valueText ?? String(r.value)
+    setLab({ datetime: l.datetime.slice(0, 16), lastDoseAt: l.lastDoseAt?.slice(0, 16) ?? '', labName: l.labName ?? '', values })
+    setLabNote(l.note ?? '')
+    setLabImage(null)
+    setExtractedRanges([])
+    setDidExtract(false)
+    setEditingLab(l)
+    setAddingLab(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  async function deleteLab(l: Lab) {
+    if (!confirm(t('meds.deleteLabConfirm', { date: fmtDate(l.datetime, i18n.language) }))) return
+    await db.labs.delete(l.id)
+    if (editingLab?.id === l.id) cancelLab()
+  }
+  function cancelLab() {
+    setAddingLab(false)
+    setEditingLab(null)
+    setLab({ datetime: nowLocalISO(), lastDoseAt: '', labName: DEFAULT_LAB, values: {} })
+    setLabNote('')
+    setLabImage(null)
+    setExtractedRanges([])
     setDidExtract(false)
   }
   function applyExtract(x: Extracted) {
@@ -200,6 +233,7 @@ export default function MedsLabs() {
         {!addingLab && <button className="btn sec sm" onClick={() => setAddingLab(true)}>＋ {t('meds.addLab')}</button>}
         {addingLab && (
           <div className="wx" style={{ fontFamily: 'inherit' }}>
+            {editingLab && <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('meds.editLab')}: {fmtDate(editingLab.datetime, i18n.language)}</div>}
             <LabPhotoImport onImage={setLabImage} onExtract={applyExtract} />
             <div className="field"><span className="k">{t('labimg.labName')}</span><input value={lab.labName} onChange={(e) => setLab({ ...lab, labName: e.target.value })} /></div>
             <div className="field"><span className="k">{t('meds.date')}</span><input type="datetime-local" value={lab.datetime} onChange={(e) => setLab({ ...lab, datetime: e.target.value })} /></div>
@@ -215,7 +249,7 @@ export default function MedsLabs() {
               </div>
             )}
             {labImage && cloud.status === 'local' && <div className="note">{t('labimg.deviceOnly')}</div>}
-            <div style={{ display: 'flex', gap: 6 }}><button className="btn sm" onClick={saveLab}>{t('btn.save')}</button><button className="btn sec sm" onClick={() => { setAddingLab(false); setLabImage(null); setExtractedRanges([]); setDidExtract(false) }}>{t('btn.cancel')}</button></div>
+            <div style={{ display: 'flex', gap: 6 }}><button className="btn sm" onClick={saveLab}>{t('btn.save')}</button><button className="btn sec sm" onClick={cancelLab}>{t('btn.cancel')}</button></div>
           </div>
         )}
         {[...labs].reverse().map((l) => (
@@ -226,6 +260,10 @@ export default function MedsLabs() {
               {(l.imageAssetId || l.imageBlob) && <LabThumb lab={l} />}
             </div>
             {l.note && <div className="note">{l.note}</div>}
+            <div style={{ display: 'flex', gap: 6, margin: '2px 0 4px' }}>
+              <button className="btn sec sm" onClick={() => startEditLab(l)}>{t('meds.editLab')}</button>
+              <button className="btn sec sm" onClick={() => deleteLab(l)}>{t('btn.delete')}</button>
+            </div>
             {l.results.map((r) => {
               const range = findRange(refs, r.analyte, l.labName)
               const n = normalize(r.value, range)
