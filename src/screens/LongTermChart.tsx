@@ -51,11 +51,21 @@ export default function LongTermChart({ events, monthly, meds, labs, refs, perio
     unus = rows.map((r) => r.unusual)
     eps = rows.flatMap((r) => r.episodes.map((e, i) => ({ x: r.ym, y: r.seizures + i * 2.2, count: e.count, hours: e.hours })))
   }
-  const axisLabel = (v: string) => (daily ? v.slice(5) : v.endsWith('-01') || cats.length <= 14 ? v.slice(2, 4) + "'" + v.slice(5) : v.slice(5).replace(/^0/, ''))
+  // Monthly axis: January shows the year ("26/1"), other months just "3月". Which months get a label depends on
+  // how many fit: ≤8 all, ≤18 odd months (so January is always visible), ≤36 quarterly, otherwise Jan/Jul.
+  const axisLabel = (v: string) => (daily ? v.slice(5).replace('-', '/') : v.endsWith('-01') || cats.length <= 8 ? v.slice(2, 4) + '/' + String(Number(v.slice(5))) : String(Number(v.slice(5))) + '月')
+  const showLabel = (index: number, value: string) => {
+    if (daily) return index % 7 === 0
+    const m = Number(value.slice(5))
+    if (cats.length <= 8) return true
+    if (cats.length <= 18) return m % 2 === 1
+    if (cats.length <= 36) return m === 1 || m === 4 || m === 7 || m === 10
+    return m === 1 || m === 7
+  }
   const opt1: echarts.EChartsOption = {
     animation: false,
-    grid: { left: 28, right: 8, top: 8, bottom: 22 },
-    xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 9, formatter: axisLabel, interval: daily ? 6 : cats.length > 24 ? 5 : 0 }, axisTick: { show: false } },
+    grid: { left: 28, right: 10, top: 8, bottom: 24, containLabel: false },
+    xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 10, formatter: axisLabel, interval: showLabel, hideOverlap: true, margin: 8 }, axisTick: { show: false } },
     yAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 9 }, splitLine: { lineStyle: { color: '#EFEDF4' } } },
     series: [
       { name: t('chart.seizures'), type: 'bar', data: seiz, itemStyle: { color: '#5B3FA8' }, barMaxWidth: 14, barCategoryGap: '25%', z: 2 },
@@ -93,7 +103,7 @@ export default function LongTermChart({ events, monthly, meds, labs, refs, perio
   const timeOpt = (s: echarts.SeriesOption[], withDose: boolean): echarts.EChartsOption => ({
     animation: false,
     grid: { left: 28, right: 8, top: 10, bottom: 22 },
-    xAxis: { type: 'time', min: fromDate ? fromDate : undefined, max: now, axisLabel: { fontSize: 9 } },
+    xAxis: { type: 'time', min: fromDate ? fromDate : undefined, max: now, axisLabel: { fontSize: 10, hideOverlap: true } },
     yAxis: { type: 'value', axisLabel: { fontSize: 9 }, splitLine: { show: false } },
     series: [
       ...s,
