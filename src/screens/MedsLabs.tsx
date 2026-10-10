@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { db, uid, type Lab, type Medication } from '../db'
 import { latestWeight, useDog, useLabs, useMeds, useRefs } from '../lib/useData'
@@ -55,6 +55,11 @@ export default function MedsLabs() {
   const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2' })
   const [addingLab, setAddingLab] = useState(false)
   const [editingLab, setEditingLab] = useState<Lab | null>(null)
+  // once the edit form is on screen, bring it into view (below the sticky header), not the page top
+  const labFormRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (editingLab && labFormRef.current) labFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [editingLab?.id])
   const [lab, setLab] = useState<{ datetime: string; lastDoseAt: string; labName: string; values: Record<string, string> }>({ datetime: nowLocalISO(), lastDoseAt: '', labName: DEFAULT_LAB, values: {} })
   const [editRefs, setEditRefs] = useState(false)
   const [labImage, setLabImage] = useState<Blob | null>(null)
@@ -103,7 +108,6 @@ export default function MedsLabs() {
     setDidExtract(false)
     setEditingLab(l)
     setAddingLab(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   async function deleteLab(l: Lab) {
     if (!confirm(t('meds.deleteLabConfirm', { date: fmtDate(l.datetime, i18n.language) }))) return
@@ -232,7 +236,7 @@ export default function MedsLabs() {
         <div className="note" style={{ marginBottom: 6 }}>{t('meds.troughNote')}</div>
         {!addingLab && <button className="btn sec sm" onClick={() => setAddingLab(true)}>＋ {t('meds.addLab')}</button>}
         {addingLab && (
-          <div className="wx" style={{ fontFamily: 'inherit' }}>
+          <div className="wx" ref={labFormRef} style={{ fontFamily: 'inherit', scrollMarginTop: 120 }}>
             {editingLab && <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('meds.editLab')}: {fmtDate(editingLab.datetime, i18n.language)}</div>}
             <LabPhotoImport onImage={setLabImage} onExtract={applyExtract} />
             <div className="field"><span className="k">{t('labimg.labName')}</span><input value={lab.labName} onChange={(e) => setLab({ ...lab, labName: e.target.value })} /></div>
