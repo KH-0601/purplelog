@@ -75,7 +75,7 @@ export default function App() {
     '/dev/community': t('dev.community'),
     '/dev/dog': t('dev.dog'),
   }
-  const title = titles[loc.pathname] ?? (loc.pathname.startsWith('/event') ? t('event.title') : t('app'))
+  const title = titles[loc.pathname] ?? (loc.pathname === '/event/new' ? t('add.addSeizure') : loc.pathname.startsWith('/event') ? t('event.title') : t('app'))
   const onSeizure = loc.pathname === '/seizure'
 
   async function unusual() {

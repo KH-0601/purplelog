@@ -1,21 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type Event } from '../db'
+import { db, uid, type Event } from '../db'
+import { currentUserId } from '../lib/cloud'
+import { attachWeatherSoon } from '../lib/autoWeather'
 import { useDog } from '../lib/useData'
 import { fetchHourly, snapshotAt, toGrid } from '../lib/weather'
 import { attachWeather } from '../lib/autoWeather'
-import { addDays, fmtDur } from '../lib/format'
+import { addDays, nowLocalISO } from '../lib/format'
 import { EventTag, GENERICS, SEIZURE_TYPES, UNUSUAL_ITEMS } from './shared'
 
 export default function EventDetail() {
   const { t } = useTranslation()
   const { id } = useParams()
+  const [params] = useSearchParams()
   const nav = useNavigate()
   const dog = useDog()
-  const stored = useLiveQuery(() => (id ? db.events.get(id) : undefined), [id])
+  const isNew = id === 'new'
+  const stored = useLiveQuery(() => (id && !isNew ? db.events.get(id) : undefined), [id, isNew])
   const [e, setE] = useState<Event | undefined>()
+  // "/event/new?kind=seizure": a fresh draft, written to the database only when saved (one save, no second screen)
+  useEffect(() => {
+    if (isNew && dog && !e) {
+      const kind = (params.get('kind') as Event['kind']) || 'seizure'
+      setE({ id: uid(), dogId: dog.id, kind, start: nowLocalISO(), tz: dog.tz, count: kind === 'seizure' ? 1 : undefined, unusualItems: kind === 'unusual' ? [] : undefined, source: 'manual', by: currentUserId() ?? undefined })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, dog?.id])
   const [busy, setBusy] = useState(false)
   useEffect(() => {
     if (stored && !e) setE(stored)
@@ -28,7 +40,7 @@ export default function EventDetail() {
   // fetch weather automatically when the record has none yet (no button needed)
   const autoTried = useRef<string | null>(null)
   useEffect(() => {
-    if (!e || e.weather || dog?.gridLat == null || autoTried.current === e.id) return
+    if (!e || isNew || e.weather || dog?.gridLat == null || autoTried.current === e.id) return
     autoTried.current = e.id
     setBusy(true)
     attachWeather(e.id)
@@ -46,6 +58,12 @@ export default function EventDetail() {
   const set = (patch: Partial<Event>) => setE({ ...e, ...patch })
   async function save() {
     if (!e) return
+    if (isNew) {
+      await db.events.add({ ...e, updatedAt: new Date().toISOString() })
+      attachWeatherSoon(e.id)
+      nav('/timeline', { replace: true })
+      return
+    }
     await db.events.put({ ...e, updatedAt: new Date().toISOString() })
     nav(-1)
   }
@@ -91,15 +109,25 @@ export default function EventDetail() {
         </div>
         <div className="field">
           <span className="k">{t('event.start')}</span>
-          <input type="datetime-local" value={e.start.slice(0, 16)} onChange={(ev) => set({ start: ev.target.value, timeUnknown: false })} />
+          <input type="datetime-local" value={e.start.slice(0, 16)} onChange={(ev) => set({ start: ev.target.value })} />
         </div>
-        {e.timeUnknown && <div className="note">{t('event.timeUnknown')}</div>}
+        <div className="field">
+          <span className="k"></span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}>
+            <input type="checkbox" checked={!!e.timeUnknown} onChange={(ev) => set({ timeUnknown: ev.target.checked })} /> {t('event.timeUnknown')}
+          </label>
+        </div>
         {e.kind === 'seizure' && (
           <>
             <div className="field">
               <span className="k">{t('event.duration')}</span>
-              <input type="number" min={0} value={e.durationSec ?? ''} placeholder={e.durationText ?? t('common.sec')} onChange={(ev) => set({ durationSec: ev.target.value === '' ? undefined : Number(ev.target.value) })} />
-              <span className="note">{fmtDur(e.durationSec, e.durationText)}</span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
+                <input type="number" inputMode="numeric" min={0} style={{ width: 70 }} value={e.durationSec == null ? '' : Math.floor(e.durationSec / 60)} placeholder="0" onChange={(ev) => set({ durationSec: ev.target.value === '' && (e.durationSec ?? 0) % 60 === 0 ? undefined : Number(ev.target.value || 0) * 60 + ((e.durationSec ?? 0) % 60) })} />
+                <span className="note">{t('common.min')}</span>
+                <input type="number" inputMode="numeric" min={0} max={59} style={{ width: 70 }} value={e.durationSec == null ? '' : e.durationSec % 60} placeholder="0" onChange={(ev) => set({ durationSec: ev.target.value === '' && Math.floor((e.durationSec ?? 0) / 60) === 0 ? undefined : Math.floor((e.durationSec ?? 0) / 60) * 60 + Number(ev.target.value || 0) })} />
+                <span className="note">{t('common.sec')}</span>
+                {e.durationText && !e.durationSec && <span className="note">{e.durationText}</span>}
+              </div>
             </div>
             <div className="field">
               <span className="k">{t('event.count')}</span>
@@ -171,7 +199,7 @@ export default function EventDetail() {
         </div>
       )}
 
-      <div className="card">
+      {!isNew && <div className="card">
         <h4>{t('event.weather')}</h4>
         {e.weather ? (
           <div className="wx">
@@ -187,7 +215,7 @@ export default function EventDetail() {
         ) : (
           <div className="note">{t('event.noGrid')}</div>
         )}
-      </div>
+      </div>}
 
       {e.planActions && e.planActions.length > 0 && (
         <div className="card">
@@ -213,9 +241,13 @@ export default function EventDetail() {
         <button className="btn" onClick={save} style={{ flex: 1 }}>
           {t('btn.save')}
         </button>
-        <button className="btn danger" onClick={remove}>
-          {t('btn.delete')}
-        </button>
+        {isNew ? (
+          <button className="btn sec" onClick={() => nav(-1)}>{t('btn.cancel')}</button>
+        ) : (
+          <button className="btn danger" onClick={remove}>
+            {t('btn.delete')}
+          </button>
+        )}
       </div>
     </>
   )

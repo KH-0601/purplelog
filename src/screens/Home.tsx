@@ -180,7 +180,7 @@ export default function Home() {
         {activeMeds.length > 0 && <div className="note">{t('dose.hint')}</div>}
         <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
           <button className="btn sec sm" onClick={() => nav('/add?tab=dose')}>＋ {t('add.addDose')}</button>
-          <button className="btn sec sm" onClick={() => nav('/add?tab=seizure')}>＋ {t('add.addSeizure')}</button>
+          <button className="btn sec sm" onClick={() => nav('/event/new?kind=seizure')}>＋ {t('add.addSeizure')}</button>
           <button className="btn sec sm" onClick={() => nav('/add?tab=plan')}>＋ {t('plan.add')}</button>
         </div>
         {upcoming.length > 0 && (

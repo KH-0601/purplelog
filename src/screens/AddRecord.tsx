@@ -1,36 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { db, uid, type DoseLog, type DosePlan, type Event } from '../db'
+import { db, uid, type DoseLog, type DosePlan } from '../db'
 import { useDog, useMeds } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
-import { attachWeatherSoon } from '../lib/autoWeather'
-import { nowLocalISO, today } from '../lib/format'
-import { GENERICS, SEIZURE_TYPES, UNUSUAL_ITEMS, currentDose } from './shared'
+import { nowLocalISO } from '../lib/format'
+import { GENERICS, currentDose } from './shared'
 
 type Tab = 'seizure' | 'dose' | 'plan'
 
-/** Manual entry: a past seizure / not-normal day, or a dose given (scheduled or as-needed) at a chosen date and time. */
+/** Manual entry: a dose given (scheduled or as-needed) at a chosen date and time, or a planned PRN schedule. Past seizures open the detail screen directly (/event/new). */
 export default function AddRecord() {
   const { t } = useTranslation()
   const nav = useNavigate()
   const [params] = useSearchParams()
   const dog = useDog()
   const meds = useMeds(dog?.id)
-  const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'seizure')
-
-  // ---- seizure form
-  const [kind, setKind] = useState<'seizure' | 'unusual'>('seizure')
-  const [date, setDate] = useState(today())
-  const [time, setTime] = useState(nowLocalISO().slice(11, 16))
-  const [timeUnknown, setTimeUnknown] = useState(false)
-  const [durMin, setDurMin] = useState('')
-  const [durSec, setDurSec] = useState('')
-  const [count, setCount] = useState('1')
-  const [stype, setStype] = useState<string>('')
-  const [cons, setCons] = useState<string>('')
-  const [items, setItems] = useState<string[]>([])
-  const [note, setNote] = useState('')
+  const [tab, setTab] = useState<Tab>(((params.get('tab') as Tab) === 'seizure' ? 'dose' : (params.get('tab') as Tab)) || 'dose')
 
   // ---- dose form
   const registered = meds.filter((m) => !m.endDate)
@@ -46,30 +32,6 @@ export default function AddRecord() {
   const [planEveryH, setPlanEveryH] = useState('8')
 
   if (!dog) return null
-
-  async function saveSeizure() {
-    const sec = kind === 'seizure' && (durMin || durSec) ? Number(durMin || 0) * 60 + Number(durSec || 0) : undefined
-    const e: Event = {
-      id: uid(),
-      dogId: dog!.id,
-      kind,
-      start: `${date}T${timeUnknown ? '00:00' : time}`,
-      tz: dog!.tz,
-      timeUnknown,
-      durationSec: sec,
-      count: kind === 'seizure' ? Math.max(1, Number(count) || 1) : undefined,
-      seizureType: kind === 'seizure' && stype ? stype : undefined,
-      consciousness: kind === 'seizure' && cons ? (cons as Event['consciousness']) : undefined,
-      unusualItems: kind === 'unusual' ? items : undefined,
-      note: note || undefined,
-      source: 'manual',
-      by: currentUserId() ?? undefined,
-      updatedAt: new Date().toISOString(),
-    }
-    await db.events.add(e)
-    attachWeatherSoon(e.id)
-    nav('/timeline', { replace: true })
-  }
 
   async function saveDose() {
     let medicationId = medKey
@@ -125,85 +87,14 @@ export default function AddRecord() {
     nav('/', { replace: true })
   }
 
-  const toggleItem = (v: string) => setItems(items.includes(v) ? items.filter((x) => x !== v) : [...items, v])
 
   return (
     <>
       <div className="period">
-        <button className={tab === 'seizure' ? 'on' : ''} onClick={() => setTab('seizure')}>{t('add.seizureTab')}</button>
         <button className={tab === 'dose' ? 'on' : ''} onClick={() => setTab('dose')}>{t('add.doseTab')}</button>
         <button className={tab === 'plan' ? 'on' : ''} onClick={() => setTab('plan')}>{t('plan.planTab')}</button>
       </div>
 
-      {tab === 'seizure' && (
-        <>
-          <div className="card">
-            <div className="field">
-              <span className="k">{t('event.kind')}</span>
-              <div className="chips">
-                <button className={'chip-btn ' + (kind === 'seizure' ? 'on' : '')} onClick={() => setKind('seizure')}>{t('event.seizure')}</button>
-                <button className={'chip-btn u ' + (kind === 'unusual' ? 'on' : '')} onClick={() => setKind('unusual')}>{t('event.unusual')}</button>
-              </div>
-            </div>
-            <div className="field"><span className="k">{t('add.date')}</span><input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="field">
-              <span className="k">{t('add.time')}</span>
-              <input type="time" value={time} disabled={timeUnknown} onChange={(e) => setTime(e.target.value)} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <input type="checkbox" checked={timeUnknown} onChange={(e) => setTimeUnknown(e.target.checked)} />
-                {t('event.timeUnknown')}
-              </label>
-            </div>
-            {kind === 'seizure' && (
-              <>
-                <div className="field">
-                  <span className="k">{t('event.duration')}</span>
-                  <input type="number" min={0} placeholder={t('common.min')} value={durMin} onChange={(e) => setDurMin(e.target.value)} />
-                  <span className="note">{t('common.min')}</span>
-                  <input type="number" min={0} max={59} placeholder={t('common.sec')} value={durSec} onChange={(e) => setDurSec(e.target.value)} />
-                  <span className="note">{t('common.sec')}</span>
-                </div>
-                <div className="field"><span className="k">{t('event.count')}</span><input type="number" min={1} value={count} onChange={(e) => setCount(e.target.value)} /></div>
-              </>
-            )}
-          </div>
-          {kind === 'seizure' ? (
-            <div className="card">
-              <h4>{t('event.type')}</h4>
-              <div className="chips">
-                {SEIZURE_TYPES.map((s) => (
-                  <button key={s} className={'chip-btn ' + (stype === s ? 'on' : '')} onClick={() => setStype(stype === s ? '' : s)}>{t('event.types.' + s)}</button>
-                ))}
-              </div>
-              <div className="field" style={{ marginTop: 6 }}>
-                <span className="k">{t('event.consciousness')}</span>
-                <select value={cons} onChange={(e) => setCons(e.target.value)}>
-                  <option value="">—</option>
-                  {(['lost', 'kept', 'unknown'] as const).map((c) => <option key={c} value={c}>{t('event.cons.' + c)}</option>)}
-                </select>
-              </div>
-            </div>
-          ) : (
-            <div className="card">
-              <h4>{t('event.unusual')}</h4>
-              <div className="chips">
-                {UNUSUAL_ITEMS.map((u) => (
-                  <button key={u} className={'chip-btn u ' + (items.includes(u) ? 'on' : '')} onClick={() => toggleItem(u)}>{t('event.items.' + u)}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="card">
-            <h4>{t('event.note')}</h4>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
-          <div className="note">{t('add.seizureNote')}</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn" style={{ flex: 1 }} onClick={saveSeizure}>{t('btn.save')}</button>
-            <button className="btn sec" onClick={() => nav(-1)}>{t('btn.cancel')}</button>
-          </div>
-        </>
-      )}
 
       {tab === 'plan' && (
         <>

@@ -52,7 +52,7 @@ export default function Timeline() {
   return (
     <>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <button className="btn sm" onClick={() => nav('/add?tab=seizure')}>＋ {t('add.addSeizure')}</button>
+        <button className="btn sm" onClick={() => nav('/event/new?kind=seizure')}>＋ {t('add.addSeizure')}</button>
         <button className="btn sec sm" onClick={() => nav('/add?tab=dose')}>＋ {t('add.addDose')}</button>
       </div>
       <div className="period">
