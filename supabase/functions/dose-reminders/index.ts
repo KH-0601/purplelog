@@ -13,6 +13,10 @@ const REMIND_MIN = Number(Deno.env.get('REMIND_MIN') ?? '30')
 const CRON_SECRET = Deno.env.get('CRON_SECRET')
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+// Immediate delivery even when the phone is locked (Apple maps urgency=high to apns-priority 10;
+// 'normal' may be batched until the device wakes). TTL 1h: a stale reminder is useless later.
+// topic = collapse key: repeated reminders replace the previous one instead of piling up.
+const PUSH_OPTS = (topic: string) => ({ TTL: 3600, urgency: 'high' as const, topic })
 const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token' }
@@ -49,7 +53,7 @@ Deno.serve(async (req) => {
     const errors: string[] = []
     for (const s of subs ?? []) {
       try {
-        await webpush.sendNotification(s.subscription, payload)
+        await webpush.sendNotification(s.subscription, payload, PUSH_OPTS('purplelog-test'))
         ok++
       } catch (e) {
         const code = (e as { statusCode?: number }).statusCode
@@ -103,7 +107,7 @@ Deno.serve(async (req) => {
   let ok = 0
   for (const s of subs ?? []) {
     try {
-      await webpush.sendNotification(s.subscription, payload)
+      await webpush.sendNotification(s.subscription, payload, PUSH_OPTS('purplelog-dose'))
       ok++
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode
