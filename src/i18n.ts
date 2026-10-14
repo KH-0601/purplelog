@@ -27,7 +27,7 @@ const ja = {
     troughNote: '抗てんかん薬の血中濃度は、毎回同じタイミング（次の投薬直前）で採血した値で比較します',
     ref: '基準', noWarn: '基準範囲はこの検査機関の値。低くても警告は出しません', normalized: '標準化: 0が基準範囲の下限、1が上限', weight: '体重', mgkg: 'mg/kg', perDay: '回/日', mgPerDose: '1回量 (mg)', reason: '理由', start: '開始日',
     generics: { phenobarbital: 'フェノバルビタール', potassium_bromide: '臭化カリウム', zonisamide: 'ゾニサミド', levetiracetam: 'レベチラセタム（イーケプラ）', imepitoin: 'イメピトイン', gabapentin: 'ガバペンチン（ガバペン）', diazepam: 'ジアゼパム', midazolam: 'ミダゾラム', supplement_trial_M010: 'サプリ（試験 M010）' },
-    kinds: { maintenance: '維持', rescue: '頓服', trial: '試験' }, resume: '再開する', stopConfirm: '「{{name}}」を中止します。今日以降の投薬予定と通知の対象から外れます。よろしいですか？', doseUnknown: '用量 未登録', schedule: '投薬時刻', scheduleNote: '1日の回数ぶん、時刻をコンマ区切りで（例 08:00, 20:00）', endDate: '終了日', stop: '中止する', stopped: '中止', adherence: '投薬の記録率',
+    kinds: { maintenance: '維持', rescue: '頓服', trial: '試験' }, resume: '再開する', stopConfirm: '「{{name}}」を中止します。今日以降の投薬予定（未実施の頓服予定を含む）と通知の対象から外れます。よろしいですか？', doseUnknown: '用量 未登録', schedule: '投薬時刻', scheduleNote: '1日の回数ぶん、時刻をコンマ区切りで（例 08:00, 20:00）', endDate: '終了日', stop: '中止する', stopped: '中止', adherence: '投薬の記録率',
   },
   chart: { title: '長期経過', seizures: '発作', unusual: 'いつもと違う日', episodes: '群発（大きさ＝持続時間）', bloodLevels: '血中濃度（基準範囲を 0–1 に標準化）と投薬変更', monitoring: 'モニタリング（T4・TSH・肝酵素）', period: { m1: '1か月', m3: '3か月', m6: '6か月', y1: '1年', all: '全期間' }, band: '基準範囲', doseLine: '投薬変更', monthlySource: '月次集計（2021.12〜2025.12はスプレッドシート、2026〜は記録から）' },
   report: {

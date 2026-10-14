@@ -78,6 +78,13 @@ export default function MedsLabs() {
     await db.medications.put({ ...m, doses: [...m.doses, d], scheduleTimes: m.scheduleTimes?.length === d.timesPerDay ? m.scheduleTimes : defaultSchedule(d.timesPerDay), updatedAt: today() })
     setEditing(null)
   }
+  /** Stop a medication today and cancel its planned doses that have not been given yet. */
+  async function stopMed(m: Medication) {
+    await db.medications.update(m.id, { endDate: today() })
+    const now = nowLocalISO()
+    const open = await db.dosePlans.where('dogId').equals(m.dogId).filter((p) => !p.doneLogId && !p.cancelled && p.time >= now && (p.medicationId === m.id || p.generic === m.generic)).toArray()
+    for (const p of open) await db.dosePlans.update(p.id, { cancelled: true })
+  }
   async function saveMed() {
     await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: defaultSchedule(Number(newMed.timesPerDay) || 2), updatedAt: today() })
     setAddingMed(false)
@@ -198,7 +205,7 @@ export default function MedsLabs() {
                 {m.endDate ? (
                   <button className="btn sec sm" onClick={() => db.medications.update(m.id, { endDate: undefined })}>{t('meds.resume')}</button>
                 ) : (
-                  <button className="btn sec sm" onClick={() => confirm(t('meds.stopConfirm', { name: t('meds.generics.' + m.generic, m.generic) })) && db.medications.update(m.id, { endDate: today() })}>{t('meds.stop')}</button>
+                  <button className="btn sec sm" onClick={() => confirm(t('meds.stopConfirm', { name: t('meds.generics.' + m.generic, m.generic) })) && stopMed(m)}>{t('meds.stop')}</button>
                 )}
               </div>
               {m.doses.length > 0 && (
