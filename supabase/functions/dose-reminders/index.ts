@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     const tz = dog.tz || 'Asia/Tokyo'
     const nowLocal = localIso(now, tz)
     const today = nowLocal.slice(0, 10)
-    for (const m of meds.filter((x) => x.dogId === dog.id && x.kind === 'maintenance' && (!x.endDate || x.endDate >= today))) {
+    for (const m of meds.filter((x) => x.dogId === dog.id && x.kind === 'maintenance' && (!x.endDate || x.endDate > today))) {
       const last = [...(m.doses ?? [])].sort((a, b) => a.date.localeCompare(b.date)).pop()
       const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(last?.timesPerDay ?? 2)
       for (const slot of slots) {

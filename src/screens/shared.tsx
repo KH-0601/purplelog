@@ -75,6 +75,7 @@ export const coversSlot = (l: { slotDate?: string; time: string; slot?: string }
 export const defaultSchedule = (timesPerDay: number) => (timesPerDay >= 3 ? ['07:00', '15:00', '23:00'] : timesPerDay === 2 ? ['08:00', '20:00'] : ['08:00'])
 
 export const currentDose = (m: Medication) => [...m.doses].sort((a, b) => a.date.localeCompare(b.date)).pop()
-export const isActiveMed = (m: Medication, today: string) => !m.endDate || m.endDate >= today
+/** Active unless stopped: a medication stopped on `endDate` is out of the schedule from that day on. */
+export const isActiveMed = (m: Medication, today: string) => !m.endDate || m.endDate > today
 
 export const CODES: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV', imepitoin: 'IMP', gabapentin: 'GBP', supplement_trial_M010: 'SUP', diazepam: 'DZP', midazolam: 'MDZ' }
