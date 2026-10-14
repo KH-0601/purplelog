@@ -3,9 +3,8 @@
  * (banner + sound + vibration + system notification when the browser allows it) every N minutes
  * until the dose is marked as given. Works while the app is open; a closed app needs push (later).
  */
-import { coversSlot } from '../screens/shared'
 import type { DoseLog, DosePlan, Medication } from '../db'
-import { currentDose, defaultSchedule, isActiveMed } from '../screens/shared'
+import { coversSlot, currentDose, defaultSchedule, isActiveMed, isScheduledMed } from '../screens/shared'
 
 export interface DueItem {
   key: string
