@@ -6,6 +6,7 @@ import { updateSettings, useDog, useDogs, useSettings } from './lib/useData'
 import { dogColorMap } from './lib/dogColor'
 import { currentUserId, useCloud } from './lib/cloud'
 import { attachWeatherSoon, backfillWeather } from './lib/autoWeather'
+import { tidyDoseLogs } from './lib/doseMaintenance'
 import { nowLocalISO } from './lib/format'
 import Home from './screens/Home'
 import Seizure from './screens/Seizure'
@@ -87,7 +88,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (cloud.status === 'ready' || cloud.status === 'local') { const t = setTimeout(() => void backfillWeather(), 3000); return () => clearTimeout(t) }
+    if (cloud.status === 'ready' || cloud.status === 'local') { void tidyDoseLogs(); const t = setTimeout(() => void backfillWeather(), 3000); return () => clearTimeout(t) }
   }, [cloud.status])
 
   const cloudDot = cloud.status === 'ready' ? '●' : cloud.status === 'syncing' || cloud.status === 'init' ? '…' : cloud.status === 'readonly' || cloud.status === 'error' ? '!' : '○'
