@@ -176,28 +176,31 @@ export default function MedsLabs() {
           const mgkg = d?.mgPerDose && kg ? ((d.mgPerDose * d.timesPerDay) / kg).toFixed(2) : null
           const rule = ruleFor(m.generic)
           return (
-            <div key={m.id}>
-              <div className="field">
-                <span>
-                  {t('meds.generics.' + m.generic, m.generic)} <span className="tag g">{t('meds.kinds.' + m.kind)}</span>
-                </span>
-                <span style={{ textAlign: 'right' }}>
+            <div key={m.id} className={'medcard ' + m.kind + (m.endDate ? ' stopped' : '')}>
+              <div className="medhead">
+                <div className="medname">
+                  {t('meds.generics.' + m.generic, m.generic)} <span className={'tag ' + (m.kind === 'maintenance' ? 'm' : m.kind === 'rescue' ? 'w' : 'g')}>{t('meds.kinds.' + m.kind)}</span>
+                  {m.endDate && <span className="tag g">{t('meds.stopped')} {fmtDate(m.endDate, i18n.language)}</span>}
+                </div>
+                <div className="meddose">
                   {d?.mgPerDose ? `${d.mgPerDose} mg × ${d.timesPerDay}` : d ? `× ${d.timesPerDay}/日` : <span className="note">{t('meds.doseUnknown')}</span>}
-                  {mgkg && ` ＝ ${mgkg} ${t('meds.mgkg')}/日`}
-                  <div>
-                    <button className="btn sec sm" onClick={() => setEditing(editing === m.id ? null : m.id)}>
-                      {t('meds.change')}
-                    </button>
-                  </div>
-                </span>
+                  {mgkg && <div className="note">{mgkg} {t('meds.mgkg')}/日</div>}
+                </div>
               </div>
               {rule && <div className="note">{rule.note[i18n.language === 'en' ? 'en' : 'ja']}</div>}
-              {m.kind === 'maintenance' && (
+              {m.kind === 'maintenance' && !m.endDate && (
                 <div className="field"><span className="k">{t('meds.schedule')}</span>
                   <input defaultValue={(m.scheduleTimes ?? defaultSchedule(d?.timesPerDay ?? 2)).join(', ')} onBlur={(e) => db.medications.update(m.id, { scheduleTimes: e.target.value.split(/[,、\s]+/).map((x) => x.trim()).filter((x) => /^\d{1,2}:\d{2}$/.test(x)).map((x) => x.padStart(5, '0')) })} />
-                  {m.endDate ? <span className="tag g">{t('meds.stopped')} {m.endDate}</span> : <button className="btn sec sm" onClick={() => confirm(t('meds.stop') + '?') && db.medications.update(m.id, { endDate: today() })}>{t('meds.stop')}</button>}
                 </div>
               )}
+              <div className="medactions">
+                <button className="btn sec sm" onClick={() => setEditing(editing === m.id ? null : m.id)}>{t('meds.change')}</button>
+                {m.endDate ? (
+                  <button className="btn sec sm" onClick={() => db.medications.update(m.id, { endDate: undefined })}>{t('meds.resume')}</button>
+                ) : (
+                  <button className="btn sec sm" onClick={() => confirm(t('meds.stopConfirm', { name: t('meds.generics.' + m.generic, m.generic) })) && db.medications.update(m.id, { endDate: today() })}>{t('meds.stop')}</button>
+                )}
+              </div>
               {m.doses.length > 0 && (
                 <div className="note">
                   {t('meds.history')}: {[...m.doses].sort((a, b) => a.date.localeCompare(b.date)).map((x) => `${fmtDate(x.date, i18n.language)} ${x.mgPerDose ?? '?'}mg×${x.timesPerDay}`).join(' → ')}

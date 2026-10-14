@@ -122,6 +122,8 @@ export interface DoseLog {
   generic: string
   time: string
   slot?: string
+  /** For scheduled doses: the date of the slot this dose covers (a 23:30 dose given at 05:59 belongs to the previous day). */
+  slotDate?: string
   /** scheduled (routine) or prn (as-needed / rescue). */
   kind?: 'scheduled' | 'prn'
   mgPerDose?: number

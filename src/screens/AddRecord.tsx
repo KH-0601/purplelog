@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { db, uid, type DoseLog, type DosePlan } from '../db'
+import { db, uid, type DoseLog, type DosePlan, type Medication } from '../db'
 import { useDog, useMeds } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
 import { nowLocalISO } from '../lib/format'
-import { GENERICS, currentDose, useDrugOptions } from './shared'
+import { GENERICS, currentDose, defaultSchedule, nearestSlotDate, useDrugOptions } from './shared'
 
 type Tab = 'seizure' | 'dose' | 'plan'
 
@@ -34,6 +34,15 @@ export default function AddRecord() {
 
   if (!dog) return null
 
+  /** Nearest schedule time of the chosen medication (for a scheduled dose entered by hand). */
+  function slotFor(atIso: string): string {
+    const m = registered.find((x) => x.id === medKey)
+    const slots = m?.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(currentDose(m ?? ({ doses: [] } as unknown as Medication))?.timesPerDay ?? 2)
+    const at = new Date(atIso.slice(0, 16)).getTime()
+    const day = atIso.slice(0, 10)
+    const best = slots.map((sl) => ({ sl, diff: Math.min(...[-1, 0, 1].map((off) => { const d = new Date(day + 'T00:00'); d.setDate(d.getDate() + off); const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return Math.abs(new Date(`${ds}T${sl}`).getTime() - at) })) })).sort((x, y) => x.diff - y.diff)[0]
+    return best?.sl ?? atIso.slice(11, 16)
+  }
   async function saveDose() {
     let medicationId = medKey
     let generic = medKey
@@ -55,7 +64,8 @@ export default function AddRecord() {
       medicationId,
       generic,
       time: doseAt,
-      slot: doseKind === 'prn' ? 'prn' : undefined,
+      slot: doseKind === 'prn' ? 'prn' : slotFor(doseAt),
+      slotDate: doseKind === 'prn' ? undefined : nearestSlotDate(slotFor(doseAt), doseAt),
       kind: doseKind,
       mgPerDose: mg ? Number(mg) : m ? currentDose(m)?.mgPerDose : undefined,
       note: doseNote || undefined,

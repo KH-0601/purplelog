@@ -24,7 +24,7 @@ const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 type Doc = { tbl: string; id: string; body: Record<string, unknown>; deleted: boolean }
 type Med = { id: string; dogId: string; generic: string; kind: string; endDate?: string; doses: { date: string; timesPerDay: number; mgPerDose?: number }[]; scheduleTimes?: string[] }
 type Plan = { id: string; dogId: string; generic: string; time: string; doneLogId?: string; cancelled?: boolean; mgPerDose?: number }
-type Log = { medicationId: string; time: string; slot?: string }
+type Log = { medicationId: string; time: string; slot?: string; slotDate?: string }
 type Dog = { id: string; name: string; tz?: string }
 
 const NAMES: Record<string, string> = { phenobarbital: 'フェノバルビタール', potassium_bromide: '臭化カリウム', zonisamide: 'ゾニサミド', levetiracetam: 'レベチラセタム', gabapentin: 'ガバペンチン' }
@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
         const dueAt = `${today}T${slot}`
         const mins = minutesBetween(dueAt, nowLocal)
         if (mins <= 0) continue
-        const given = logs.some((l) => l.medicationId === m.id && l.time.startsWith(today) && (l.slot === slot || (!l.slot && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3)))
+        const given = logs.some((l) => l.medicationId === m.id && (l.slot ? l.slot === slot && (l.slotDate ?? l.time.slice(0, 10)) === today : l.time.startsWith(today) && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3))
         if (!given) due.push({ key: `r:${m.id}:${dueAt}`, dogId: dog.id, text: `${dog.name}: ${NAMES[m.generic] ?? m.generic} ${slot}`, minutes: mins })
       }
     }

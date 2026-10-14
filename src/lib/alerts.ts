@@ -3,6 +3,7 @@
  * (banner + sound + vibration + system notification when the browser allows it) every N minutes
  * until the dose is marked as given. Works while the app is open; a closed app needs push (later).
  */
+import { coversSlot } from '../screens/shared'
 import type { DoseLog, DosePlan, Medication } from '../db'
 import { currentDose, defaultSchedule, isActiveMed } from '../screens/shared'
 
@@ -30,7 +31,7 @@ export function computeDue(meds: Medication[], plans: DosePlan[], logs: DoseLog[
     const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(d?.timesPerDay ?? 2)
     for (const slot of slots) {
       const due = `${today}T${slot}`
-      const given = logs.some((l) => l.medicationId === m.id && l.time.startsWith(today) && (l.slot === slot || (!l.slot && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3)))
+      const given = logs.some((l) => l.medicationId === m.id && coversSlot(l, today, slot))
       if (given) continue
       const overdueMin = (now.getTime() - new Date(due).getTime()) / 60000
       if (overdueMin > 0) out.push({ key: `r:${m.id}:${due}`, kind: 'routine', medicationId: m.id, generic: m.generic, due, slot, mgPerDose: d?.mgPerDose, overdueMin })

@@ -57,7 +57,7 @@ export default function DoseAlerts() {
   if (!shown.length) return null
 
   async function give(it: DueItem) {
-    const log: DoseLog = { id: uid(), dogId: it.dogId!, medicationId: it.medicationId, generic: it.generic, time: toLocalISO(new Date()), slot: it.kind === 'routine' ? it.slot : 'prn', kind: it.kind === 'routine' ? 'scheduled' : 'prn', mgPerDose: it.mgPerDose, by: currentUserId() ?? undefined }
+    const log: DoseLog = { id: uid(), dogId: it.dogId!, medicationId: it.medicationId, generic: it.generic, time: toLocalISO(new Date()), slot: it.kind === 'routine' ? it.slot : 'prn', slotDate: it.kind === 'routine' ? it.due.slice(0, 10) : undefined, kind: it.kind === 'routine' ? 'scheduled' : 'prn', mgPerDose: it.mgPerDose, by: currentUserId() ?? undefined }
     await db.doseLogs.add(log)
     if (it.planId) await db.dosePlans.update(it.planId, { doneLogId: log.id })
     setShown((x) => x.filter((y) => y.key !== it.key))

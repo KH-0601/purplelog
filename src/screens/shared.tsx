@@ -54,6 +54,24 @@ export const SEIZURE_TYPES = ['generalized_tonic_clonic', 'focal', 'focal_behavi
 
 export const SEX_OPTIONS = ['male', 'male_neutered', 'female', 'female_spayed', 'unknown'] as const
 
+/** The date of the slot occurrence nearest to `atLocalIso` (yesterday / today / tomorrow). */
+export function nearestSlotDate(slot: string, atLocalIso: string): string {
+  const at = new Date(atLocalIso.slice(0, 16)).getTime()
+  const day = atLocalIso.slice(0, 10)
+  const cands = [-1, 0, 1].map((off) => {
+    const d = new Date(day + 'T00:00')
+    d.setDate(d.getDate() + off)
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return { ds, diff: Math.abs(new Date(`${ds}T${slot}`).getTime() - at) }
+  })
+  return cands.sort((a, b) => a.diff - b.diff)[0].ds
+}
+/** Which day's slot a stored dose log covers (older logs fall back to the time's date). */
+export const logSlotDate = (l: { slotDate?: string; time: string }) => l.slotDate ?? l.time.slice(0, 10)
+/** Does this log cover `slot` on `date`? (legacy logs without a slot: same date, within 3 h) */
+export const coversSlot = (l: { slotDate?: string; time: string; slot?: string }, date: string, slot: string) =>
+  l.slot ? l.slot === slot && logSlotDate(l) === date : l.time.startsWith(date) && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3
+
 export const defaultSchedule = (timesPerDay: number) => (timesPerDay >= 3 ? ['07:00', '15:00', '23:00'] : timesPerDay === 2 ? ['08:00', '20:00'] : ['08:00'])
 
 export const currentDose = (m: Medication) => [...m.doses].sort((a, b) => a.date.localeCompare(b.date)).pop()

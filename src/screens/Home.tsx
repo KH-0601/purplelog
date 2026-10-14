@@ -10,7 +10,7 @@ import { currentUserId } from '../lib/cloud'
 import { monthlyRows, ymOf } from '../lib/monthly'
 import { addDays, daysBetween, fmtDur, fmtMD, nowLocalISO, today } from '../lib/format'
 import { nextCheck, ruleFor } from '../lib/monitoring'
-import { CODES, EventTag, currentDose, defaultSchedule, eventLabel, isActiveMed } from './shared'
+import { CODES, EventTag, coversSlot, currentDose, defaultSchedule, eventLabel, isActiveMed, nearestSlotDate } from './shared'
 
 const GENERIC_TO_ANALYTE: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV' }
 
@@ -51,10 +51,14 @@ export default function Home() {
   // ---- today's doses
   const kg = latestWeight(dog.weights)
   const activeMeds = meds.filter((m) => m.kind === 'maintenance' && isActiveMed(m, now))
-  const todayLogs = doseLogs.filter((l) => l.time.startsWith(now))
   async function giveDose(m: Medication, slot: string) {
     const d = currentDose(m)
-    const log: DoseLog = { id: uid(), dogId: dog!.id, medicationId: m.id, generic: m.generic, time: nowLocalISO(), slot, kind: 'scheduled', mgPerDose: d?.mgPerDose, by: currentUserId() ?? undefined }
+    const t = nowLocalISO()
+    const slotDate = nearestSlotDate(slot, t)
+    // idempotent: a second tap (or a tap before sync caught up) must not create a duplicate record
+    const dup = await db.doseLogs.where('dogId').equals(dog!.id).filter((l) => l.medicationId === m.id && coversSlot(l, slotDate, slot)).first()
+    if (dup) return
+    const log: DoseLog = { id: uid(), dogId: dog!.id, medicationId: m.id, generic: m.generic, time: t, slot, slotDate, kind: 'scheduled', mgPerDose: d?.mgPerDose, by: currentUserId() ?? undefined }
     await db.doseLogs.add(log)
   }
   const nowIso = nowLocalISO()
@@ -149,7 +153,7 @@ export default function Home() {
               </div>
               <div className="dose-slots">
                 {slots.map((slot) => {
-                  const log = todayLogs.find((l) => l.medicationId === m.id && l.slot === slot) ?? todayLogs.find((l) => l.medicationId === m.id && !l.slot && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3)
+                  const log = doseLogs.find((l) => l.medicationId === m.id && coversSlot(l, now, slot))
                   return log ? (
                     <button key={slot} className="dose-btn done" onClick={() => undoDose(log)} title={t('dose.undo')}>
                       ✓ {slot} <small>{log.time.slice(11, 16)}</small>
