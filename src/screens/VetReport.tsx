@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { latestWeight, useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useRefs } from '../lib/useData'
-import { defaultSchedule, isActiveMed } from './shared'
+import { defaultSchedule, isActiveMed, isScheduledMed } from './shared'
 import { buildEpisodes } from '../lib/episodes'
 import { monthlyRows } from '../lib/monthly'
 import { addDays, daysBetween, fmtDate, fmtDur, today } from '../lib/format'
@@ -45,7 +45,7 @@ export default function VetReport() {
   const currentDose = (m: (typeof meds)[number]) => [...m.doses].sort((a, b) => a.date.localeCompare(b.date)).pop()
   // adherence: doses recorded vs planned slots, over the last 30 days
   const adhFrom = addDays(now, -29)
-  const planned = meds.filter((m) => m.kind === 'maintenance' && isActiveMed(m, now)).reduce((a, m) => a + (m.scheduleTimes?.length ?? defaultSchedule(currentDose(m)?.timesPerDay ?? 2).length) * 30, 0)
+  const planned = meds.filter((m) => isScheduledMed(m) && isActiveMed(m, now)).reduce((a, m) => a + (m.scheduleTimes?.length ?? defaultSchedule(currentDose(m)?.timesPerDay ?? 2).length) * 30, 0)
   const given = doseLogs.filter((l) => l.time >= adhFrom && l.kind !== 'prn' && l.slot !== 'prn').length
   const prnLogs = doseLogs.filter((l) => (l.kind === 'prn' || l.slot === 'prn') && (!from || l.time >= from))
 

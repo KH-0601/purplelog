@@ -110,6 +110,8 @@ export interface Medication {
   doses: DoseChange[]
   /** Planned clock times, e.g. ["08:00","20:00"]. */
   scheduleTimes?: string[]
+  /** Rescue/trial drugs: true = given every day at scheduleTimes (shown on Home, reminders). Maintenance is always scheduled. */
+  scheduled?: boolean
   misses?: string[]
   updatedAt?: string
 }

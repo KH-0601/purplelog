@@ -76,6 +76,8 @@ export const defaultSchedule = (timesPerDay: number) => (timesPerDay >= 3 ? ['07
 
 export const currentDose = (m: Medication) => [...m.doses].sort((a, b) => a.date.localeCompare(b.date)).pop()
 /** Active unless stopped: a medication stopped on `endDate` is out of the schedule from that day on. */
+/** Appears in Home's daily doses and in reminders: maintenance always; rescue/trial only when marked as daily. */
+export const isScheduledMed = (m: Medication) => m.kind === 'maintenance' || m.scheduled === true
 export const isActiveMed = (m: Medication, today: string) => !m.endDate || m.endDate > today
 
 export const CODES: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV', imepitoin: 'IMP', gabapentin: 'GBP', supplement_trial_M010: 'SUP', diazepam: 'DZP', midazolam: 'MDZ' }

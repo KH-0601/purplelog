@@ -10,7 +10,7 @@ import { currentUserId } from '../lib/cloud'
 import { monthlyRows, ymOf } from '../lib/monthly'
 import { addDays, daysBetween, fmtDur, fmtMD, nowLocalISO, today } from '../lib/format'
 import { nextCheck, ruleFor } from '../lib/monitoring'
-import { CODES, EventTag, coversSlot, currentDose, defaultSchedule, eventLabel, isActiveMed, nearestSlotDate } from './shared'
+import { CODES, EventTag, coversSlot, currentDose, defaultSchedule, eventLabel, isActiveMed, isScheduledMed, nearestSlotDate } from './shared'
 
 const GENERIC_TO_ANALYTE: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV' }
 
@@ -50,7 +50,7 @@ export default function Home() {
 
   // ---- today's doses
   const kg = latestWeight(dog.weights)
-  const activeMeds = meds.filter((m) => m.kind === 'maintenance' && isActiveMed(m, now))
+  const activeMeds = meds.filter((m) => isScheduledMed(m) && isActiveMed(m, now))
   async function giveDose(m: Medication, slot: string) {
     const d = currentDose(m)
     const t = nowLocalISO()

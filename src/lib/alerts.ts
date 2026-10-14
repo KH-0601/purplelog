@@ -26,7 +26,7 @@ export function computeDue(meds: Medication[], plans: DosePlan[], logs: DoseLog[
   const today = toLocalISO(now).slice(0, 10)
   const out: DueItem[] = []
   for (const m of meds) {
-    if (m.kind !== 'maintenance' || !isActiveMed(m, today)) continue
+    if (!isScheduledMed(m) || !isActiveMed(m, today)) continue
     const d = currentDose(m)
     const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(d?.timesPerDay ?? 2)
     for (const slot of slots) {
