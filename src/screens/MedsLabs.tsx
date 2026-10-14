@@ -52,8 +52,14 @@ export default function MedsLabs() {
   const [editing, setEditing] = useState<string | null>(null)
   const [dose, setDose] = useState({ date: today(), mgPerDose: '', timesPerDay: '2', reason: '' })
   const [addingMed, setAddingMed] = useState(false)
-  const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2', times: defaultSchedule(2).join(', ') })
-  const parseTimes = (v: string) => v.split(/[,、\s]+/).map((x) => x.trim()).filter((x) => /^\d{1,2}:\d{2}$/.test(x)).map((x) => x.padStart(5, '0'))
+  const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2', firstTime: '08:00', everyH: '12' })
+  /** Daily dose times built like the plan form: first time, then every N hours, n times (wrapping past midnight). */
+  const builtTimes = (firstTime: string, n: number, everyH: number) => {
+    const [h, mi] = firstTime.split(':').map(Number)
+    if (!Number.isFinite(h) || !Number.isFinite(mi)) return defaultSchedule(n || 2)
+    return Array.from({ length: Math.max(1, Math.min(n || 1, 6)) }, (_, k) => { const m = (h * 60 + mi + k * (everyH || 24) * 60) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` }).sort()
+  }
+  const newTimes = builtTimes(newMed.firstTime, Number(newMed.timesPerDay), Number(newMed.everyH))
   const [addingLab, setAddingLab] = useState(false)
   const [editingLab, setEditingLab] = useState<Lab | null>(null)
   // once the edit form is on screen, bring it into view (below the sticky header), not the page top
@@ -87,7 +93,7 @@ export default function MedsLabs() {
     for (const p of open) await db.dosePlans.update(p.id, { cancelled: true })
   }
   async function saveMed() {
-    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: parseTimes(newMed.times).length ? parseTimes(newMed.times) : defaultSchedule(Number(newMed.timesPerDay) || 2), updatedAt: today() })
+    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: newTimes, updatedAt: today() })
     setAddingMed(false)
   }
   async function saveLab() {
@@ -234,9 +240,16 @@ export default function MedsLabs() {
               <select value={newMed.kind} onChange={(e) => setNewMed({ ...newMed, kind: e.target.value })}>{['maintenance', 'rescue', 'trial'].map((k) => <option key={k} value={k}>{t('meds.kinds.' + k)}</option>)}</select></div>
             <div className="field"><span className="k">{t('meds.start')}</span><input type="date" value={newMed.startDate} onChange={(e) => setNewMed({ ...newMed, startDate: e.target.value })} /></div>
             <div className="field"><span className="k">{t('meds.mgPerDose')}</span><input type="number" step="any" value={newMed.mgPerDose} onChange={(e) => setNewMed({ ...newMed, mgPerDose: e.target.value })} /></div>
-            <div className="field"><span className="k">{t('meds.perDay')}</span><input type="number" value={newMed.timesPerDay} onChange={(e) => setNewMed({ ...newMed, timesPerDay: e.target.value, times: defaultSchedule(Number(e.target.value) || 2).join(', ') })} /></div>
-            <div className="field"><span className="k">{t('meds.schedule')}</span><input value={newMed.times} placeholder="08:00, 20:00" onChange={(e) => setNewMed({ ...newMed, times: e.target.value })} /></div>
-            <div className="note">{t('meds.scheduleHint')}</div>
+            <div className="field"><span className="k">{t('meds.firstTime')}</span><input type="time" value={newMed.firstTime} onChange={(e) => setNewMed({ ...newMed, firstTime: e.target.value })} /></div>
+            <div className="field"><span className="k">{t('plan.repeat')}</span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
+                <input type="number" min={1} max={6} style={{ width: 64 }} value={newMed.timesPerDay} onChange={(e) => { const n = Number(e.target.value) || 1; setNewMed({ ...newMed, timesPerDay: e.target.value, everyH: String(Math.round(24 / Math.max(1, n))) }) }} />
+                <span className="note">{t('plan.times')}</span>
+                <input type="number" min={1} max={24} style={{ width: 64 }} value={newMed.everyH} onChange={(e) => setNewMed({ ...newMed, everyH: e.target.value })} />
+                <span className="note">{t('plan.every')}</span>
+              </div>
+            </div>
+            <div className="note">{t('meds.schedule')}: {newTimes.join(', ')}　{t('meds.scheduleHint')}</div>
             <div style={{ display: 'flex', gap: 6 }}><button className="btn sm" onClick={saveMed}>{t('btn.save')}</button><button className="btn sec sm" onClick={() => setAddingMed(false)}>{t('btn.cancel')}</button></div>
           </div>
         ) : (
