@@ -52,7 +52,8 @@ export default function MedsLabs() {
   const [editing, setEditing] = useState<string | null>(null)
   const [dose, setDose] = useState({ date: today(), mgPerDose: '', timesPerDay: '2', reason: '' })
   const [addingMed, setAddingMed] = useState(false)
-  const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2' })
+  const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2', times: defaultSchedule(2).join(', ') })
+  const parseTimes = (v: string) => v.split(/[,、\s]+/).map((x) => x.trim()).filter((x) => /^\d{1,2}:\d{2}$/.test(x)).map((x) => x.padStart(5, '0'))
   const [addingLab, setAddingLab] = useState(false)
   const [editingLab, setEditingLab] = useState<Lab | null>(null)
   // once the edit form is on screen, bring it into view (below the sticky header), not the page top
@@ -86,7 +87,7 @@ export default function MedsLabs() {
     for (const p of open) await db.dosePlans.update(p.id, { cancelled: true })
   }
   async function saveMed() {
-    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: defaultSchedule(Number(newMed.timesPerDay) || 2), updatedAt: today() })
+    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: parseTimes(newMed.times).length ? parseTimes(newMed.times) : defaultSchedule(Number(newMed.timesPerDay) || 2), updatedAt: today() })
     setAddingMed(false)
   }
   async function saveLab() {
@@ -233,7 +234,9 @@ export default function MedsLabs() {
               <select value={newMed.kind} onChange={(e) => setNewMed({ ...newMed, kind: e.target.value })}>{['maintenance', 'rescue', 'trial'].map((k) => <option key={k} value={k}>{t('meds.kinds.' + k)}</option>)}</select></div>
             <div className="field"><span className="k">{t('meds.start')}</span><input type="date" value={newMed.startDate} onChange={(e) => setNewMed({ ...newMed, startDate: e.target.value })} /></div>
             <div className="field"><span className="k">{t('meds.mgPerDose')}</span><input type="number" step="any" value={newMed.mgPerDose} onChange={(e) => setNewMed({ ...newMed, mgPerDose: e.target.value })} /></div>
-            <div className="field"><span className="k">{t('meds.perDay')}</span><input type="number" value={newMed.timesPerDay} onChange={(e) => setNewMed({ ...newMed, timesPerDay: e.target.value })} /></div>
+            <div className="field"><span className="k">{t('meds.perDay')}</span><input type="number" value={newMed.timesPerDay} onChange={(e) => setNewMed({ ...newMed, timesPerDay: e.target.value, times: defaultSchedule(Number(e.target.value) || 2).join(', ') })} /></div>
+            <div className="field"><span className="k">{t('meds.schedule')}</span><input value={newMed.times} placeholder="08:00, 20:00" onChange={(e) => setNewMed({ ...newMed, times: e.target.value })} /></div>
+            <div className="note">{t('meds.scheduleHint')}</div>
             <div style={{ display: 'flex', gap: 6 }}><button className="btn sm" onClick={saveMed}>{t('btn.save')}</button><button className="btn sec sm" onClick={() => setAddingMed(false)}>{t('btn.cancel')}</button></div>
           </div>
         ) : (
