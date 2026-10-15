@@ -236,7 +236,7 @@ export default function Settings() {
                 {([1, 2, 3] as const).map((n) => <button key={n} className={'chip-btn ' + ((view.patternCount ?? 1) === n ? 'on' : '')} onClick={() => db.dogs.update(dog.id, { patternCount: n })}>{t('settings.patternCountN', { n })}</button>)}
               </div>
             </div>
-            {dogPatterns(view).map((p) => (
+            {dogPatterns(view).length > 1 && dogPatterns(view).map((p) => (
               <div className="field" key={p}><span className="k" style={{ color: PATTERN_COLORS[p], fontWeight: 700 }}>{t('seizure.pattern' + p)}</span><input value={view.seizurePatterns?.[p] ?? ''} placeholder={t('settings.patternPh' + p)} onChange={(e) => patchDog({ seizurePatterns: { ...(view.seizurePatterns ?? {}), [p]: e.target.value } })} /></div>
             ))}
           </div>
