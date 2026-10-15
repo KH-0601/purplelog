@@ -12,6 +12,7 @@ export default function Seizure() {
   const nav = useNavigate()
   const dog = useDog()
   const [startAt, setStartAt] = useState<number | null>(null)
+  const [pattern, setPattern] = useState<'A' | 'B' | undefined>(undefined)
   const [elapsed, setElapsed] = useState(0)
   const [rescueAt, setRescueAt] = useState<string | null>(null)
   const [videoOn, setVideoOn] = useState(false)
@@ -37,7 +38,8 @@ export default function Seizure() {
     wakeRef.current?.release().catch(() => {})
   }
 
-  async function start() {
+  async function start(p: 'A' | 'B') {
+    setPattern(p)
     setStartAt(Date.now())
     try {
       wakeRef.current = await navigator.wakeLock?.request('screen')
@@ -77,6 +79,7 @@ export default function Seizure() {
       id,
       dogId: dog.id,
       kind: 'seizure',
+      pattern,
       start: toLocal(startAt),
       end: toLocal(endAt),
       durationSec: Math.round((endAt - startAt) / 1000),
@@ -114,10 +117,17 @@ export default function Seizure() {
   if (startAt == null)
     return (
       <div className="big">
-        <button className="circle" onClick={start}>
-          {t('btn.seizureStart')}
-          <small>{t('seizure.tapStart')}</small>
-        </button>
+        <div className="patterns">
+          <button className="circle pa" onClick={() => start('A')}>
+            {t('seizure.patternA')}
+            <small>{dog?.seizurePatterns?.A || t('seizure.tapStart')}</small>
+          </button>
+          <button className="circle pb" onClick={() => start('B')}>
+            {t('seizure.patternB')}
+            <small>{dog?.seizurePatterns?.B || t('seizure.tapStart')}</small>
+          </button>
+        </div>
+        <div className="note" style={{ textAlign: 'center' }}>{t('seizure.patternHint')}</div>
         <div className="note" style={{ textAlign: 'center' }}>
           {t('seizure.videoOpt')}: {dog?.recordVideo ? t('seizure.on') : t('seizure.off')}
           {dog?.recordVideo && (

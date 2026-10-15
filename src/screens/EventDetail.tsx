@@ -108,6 +108,18 @@ export default function EventDetail() {
           </div>
           <EventTag e={e} />
         </div>
+        {e.kind === 'seizure' && (
+          <div className="field">
+            <span className="k">{t('event.pattern')}</span>
+            <div className="chips">
+              {(['A', 'B'] as const).map((p) => (
+                <button key={p} className={'chip-btn ' + (e.pattern === p ? 'on' : '')} style={e.pattern === p ? { background: p === 'A' ? '#4A2F9E' : '#9C86D9', borderColor: p === 'A' ? '#4A2F9E' : '#9C86D9' } : undefined} onClick={() => set({ pattern: e.pattern === p ? undefined : p })}>
+                  {t('seizure.pattern' + p)}{dog.seizurePatterns?.[p] ? `（${dog.seizurePatterns[p]}）` : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="field">
           <span className="k">{t('event.start')}</span>
           <input type="datetime-local" value={e.start.slice(0, 16)} onChange={(ev) => set({ start: ev.target.value })} />

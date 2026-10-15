@@ -229,6 +229,12 @@ export default function Settings() {
             <div className="note">{t('settings.recordNote')}</div>
           </div>
           <div className="card">
+            <h4>{t('settings.patterns')}</h4>
+            <div className="note" style={{ marginBottom: 6 }}>{t('settings.patternsIntro')}</div>
+            <div className="field"><span className="k" style={{ color: '#4A2F9E', fontWeight: 700 }}>{t('seizure.patternA')}</span><input value={view.seizurePatterns?.A ?? ''} placeholder={t('settings.patternPhA')} onChange={(e) => patchDog({ seizurePatterns: { ...(view.seizurePatterns ?? {}), A: e.target.value } })} /></div>
+            <div className="field"><span className="k" style={{ color: '#7B63C7', fontWeight: 700 }}>{t('seizure.patternB')}</span><input value={view.seizurePatterns?.B ?? ''} placeholder={t('settings.patternPhB')} onChange={(e) => patchDog({ seizurePatterns: { ...(view.seizurePatterns ?? {}), B: e.target.value } })} /></div>
+          </div>
+          <div className="card">
             <h4>{t('eplan.title')}</h4>
             <div className="note" style={{ marginBottom: 6 }}>{t('eplan.intro')}</div>
             <div className="field"><span className="k">{t('eplan.triggerMin')}</span><input type="number" min={1} value={plan.triggerMin} onChange={(e) => savePlan({ triggerMin: Number(e.target.value) || 5 })} /></div>

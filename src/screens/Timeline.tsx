@@ -31,7 +31,7 @@ export default function Timeline() {
       items.push({ date: ep.start, kind: 'cluster', label: `${t('timeline.cluster')} ${ep.seizures}${t('timeline.seizures')}${ep.hours > 0 ? ` / ${Math.round(ep.hours)}${t('timeline.hours')}` : ''}`, id: ep.eventIds[0] })
     } else {
       const e = events.find((x) => x.id === ep.eventIds[0])!
-      items.push({ date: e.start, kind: 'seizure', label: `${eventLabel(e, t)} ${fmtDur(e.durationSec, e.durationText)}`, sub: e.note, id: e.id, by: e.by })
+      items.push({ date: e.start, kind: 'seizure', label: `${eventLabel(e, t, undefined, dog)} ${fmtDur(e.durationSec, e.durationText)}`, sub: e.note, id: e.id, by: e.by })
     }
   }
   for (const e of events.filter((x) => x.kind !== 'seizure')) items.push({ date: e.start, kind: e.kind, label: eventLabel(e, t), sub: e.note, id: e.id, by: e.by })
@@ -81,7 +81,7 @@ export default function Timeline() {
               {isLab && open === it.id && (
                 <div className="wx" style={{ fontFamily: 'inherit', marginBottom: 6 }}>
                   <div className="note">{t('timeline.unusualNear')}</div>
-                  {near.length ? near.map((e) => <div key={e.id}>{fmtDate(e.start, i18n.language)} {eventLabel(e, t)}</div>) : t('timeline.none')}
+                  {near.length ? near.map((e) => <div key={e.id}>{fmtDate(e.start, i18n.language)} {eventLabel(e, t, undefined, dog)}</div>) : t('timeline.none')}
                 </div>
               )}
             </div>

@@ -21,6 +21,8 @@ export interface Dog {
   breed?: string
   /** display colour (hex) used for the switcher tabs and alerts */
   color?: string
+  /** Free-text description of the two seizure patterns offered on the seizure screen (A = darker purple, B = lighter). */
+  seizurePatterns?: { A?: string; B?: string }
   /** small JPEG data URL shown on Home */
   photo?: string
   diagnosis?: string
@@ -61,6 +63,8 @@ export interface Event {
   durationSec?: number
   durationText?: string
   count?: number
+  /** Household-defined seizure pattern (names/descriptions live on the dog: seizurePatterns). */
+  pattern?: 'A' | 'B'
   seizureType?: string
   consciousness?: 'lost' | 'kept' | 'unknown'
   recoveryMin?: number

@@ -236,7 +236,7 @@ export default function Home() {
         {recent.map((e) => (
           <div className="row" key={e.id} onClick={() => nav(`/event/${e.id}`)} style={{ cursor: 'pointer' }}>
             <span className="d">{fmtMD(e.start)}</span>
-            <span className="grow">{eventLabel(e, t, i18n.language)}{e.kind === 'seizure' && e.durationSec != null ? ` ${fmtDur(e.durationSec)}` : ''}</span>
+            <span className="grow">{eventLabel(e, t, i18n.language, dog)}{e.kind === 'seizure' && e.durationSec != null ? ` ${fmtDur(e.durationSec)}` : ''}</span>
             <EventTag e={e} />
           </div>
         ))}

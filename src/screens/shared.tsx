@@ -4,15 +4,21 @@ import type { TFunction } from 'i18next'
 import type { Event, Medication } from '../db'
 
 export function EventTag({ e }: { e: Event }) {
-  const cls = e.kind === 'seizure' ? 's' : e.kind === 'unusual' ? 'u' : 'g'
-  const label = e.kind === 'seizure' ? '発作' : e.kind === 'unusual' ? 'いつもと違う' : 'その他'
+  const cls = e.kind === 'seizure' ? (e.pattern === 'B' ? 's b' : 's') : e.kind === 'unusual' ? 'u' : 'g'
+  const label = e.kind === 'seizure' ? '発作' + (e.pattern ?? '') : e.kind === 'unusual' ? 'いつもと違う' : 'その他'
   return <span className={'tag ' + cls}>{label}</span>
 }
+/** "発作A（全身の痙攣）" style label; falls back to the plain word when no pattern is set. */
+export function seizureName(e: { pattern?: 'A' | 'B' }, t: TFunction, dog?: { seizurePatterns?: { A?: string; B?: string } }) {
+  if (!e.pattern) return t('event.seizure')
+  const desc = dog?.seizurePatterns?.[e.pattern]
+  return `${t('event.seizure')}${e.pattern}${desc ? `（${desc}）` : ''}`
+}
 
-export function eventLabel(e: Event, t: TFunction, _lang?: string) {
+export function eventLabel(e: Event, t: TFunction, _lang?: string, dog?: { seizurePatterns?: { A?: string; B?: string } }) {
   if (e.kind === 'seizure') {
     const n = e.count && e.count > 1 ? ` ×${e.count}` : ''
-    return `${t('event.seizure')}${n}${e.estimated ? ` (${t('event.estimated')})` : ''}`
+    return `${seizureName(e, t, dog)}${n}${e.estimated ? ` (${t('event.estimated')})` : ''}`
   }
   if (e.kind === 'unusual') {
     const items = (e.unusualItems ?? []).map((i) => t('event.items.' + i, i)).join('・')
