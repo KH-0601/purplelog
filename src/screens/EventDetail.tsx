@@ -9,7 +9,7 @@ import { useDog } from '../lib/useData'
 import { fetchHourly, snapshotAt, toGrid } from '../lib/weather'
 import { attachWeather } from '../lib/autoWeather'
 import { addDays, nowLocalISO } from '../lib/format'
-import { EventTag, SEIZURE_TYPES, UNUSUAL_ITEMS, useDrugOptions } from './shared'
+import { EventTag, PATTERN_COLORS, SEIZURE_TYPES, UNUSUAL_ITEMS, dogPatterns, useDrugOptions, type Pattern } from './shared'
 
 export default function EventDetail() {
   const { t } = useTranslation()
@@ -108,12 +108,12 @@ export default function EventDetail() {
           </div>
           <EventTag e={e} />
         </div>
-        {e.kind === 'seizure' && (
+        {e.kind === 'seizure' && (dogPatterns(dog).length > 1 || e.pattern) && (
           <div className="field">
             <span className="k">{t('event.pattern')}</span>
             <div className="chips">
-              {(['A', 'B'] as const).map((p) => (
-                <button key={p} className={'chip-btn ' + (e.pattern === p ? 'on' : '')} style={e.pattern === p ? { background: p === 'A' ? '#4A2F9E' : '#9C86D9', borderColor: p === 'A' ? '#4A2F9E' : '#9C86D9' } : undefined} onClick={() => set({ pattern: e.pattern === p ? undefined : p })}>
+              {Array.from(new Set<Pattern>([...dogPatterns(dog), ...(e.pattern ? [e.pattern] : [])])).map((p) => (
+                <button key={p} className={'chip-btn ' + (e.pattern === p ? 'on' : '')} style={e.pattern === p ? { background: PATTERN_COLORS[p], borderColor: PATTERN_COLORS[p] } : undefined} onClick={() => set({ pattern: e.pattern === p ? undefined : p })}>
                   {t('seizure.pattern' + p)}{dog.seizurePatterns?.[p] ? `（${dog.seizurePatterns[p]}）` : ''}
                 </button>
               ))}

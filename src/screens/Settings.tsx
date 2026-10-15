@@ -11,7 +11,7 @@ import { pushState, subscribePush, unsubscribePush, type PushState } from '../li
 import { DOG_PALETTE, dogColorMap } from '../lib/dogColor'
 import { invokeFunction } from '../lib/supabase'
 import DogPhoto from './DogPhoto'
-import { GENERICS } from './shared'
+import { GENERICS, PATTERN_COLORS, dogPatterns } from './shared'
 import { useDrugs } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
 
@@ -231,8 +231,14 @@ export default function Settings() {
           <div className="card">
             <h4>{t('settings.patterns')}</h4>
             <div className="note" style={{ marginBottom: 6 }}>{t('settings.patternsIntro')}</div>
-            <div className="field"><span className="k" style={{ color: '#4A2F9E', fontWeight: 700 }}>{t('seizure.patternA')}</span><input value={view.seizurePatterns?.A ?? ''} placeholder={t('settings.patternPhA')} onChange={(e) => patchDog({ seizurePatterns: { ...(view.seizurePatterns ?? {}), A: e.target.value } })} /></div>
-            <div className="field"><span className="k" style={{ color: '#7B63C7', fontWeight: 700 }}>{t('seizure.patternB')}</span><input value={view.seizurePatterns?.B ?? ''} placeholder={t('settings.patternPhB')} onChange={(e) => patchDog({ seizurePatterns: { ...(view.seizurePatterns ?? {}), B: e.target.value } })} /></div>
+            <div className="field"><span className="k">{t('settings.patternCount')}</span>
+              <div className="chips">
+                {([1, 2, 3] as const).map((n) => <button key={n} className={'chip-btn ' + ((view.patternCount ?? 1) === n ? 'on' : '')} onClick={() => db.dogs.update(dog.id, { patternCount: n })}>{t('settings.patternCountN', { n })}</button>)}
+              </div>
+            </div>
+            {dogPatterns(view).map((p) => (
+              <div className="field" key={p}><span className="k" style={{ color: PATTERN_COLORS[p], fontWeight: 700 }}>{t('seizure.pattern' + p)}</span><input value={view.seizurePatterns?.[p] ?? ''} placeholder={t('settings.patternPh' + p)} onChange={(e) => patchDog({ seizurePatterns: { ...(view.seizurePatterns ?? {}), [p]: e.target.value } })} /></div>
+            ))}
           </div>
           <div className="card">
             <h4>{t('eplan.title')}</h4>

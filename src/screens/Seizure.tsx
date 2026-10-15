@@ -5,6 +5,7 @@ import { db, uid, type PlanAction } from '../db'
 import { useDog } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
 import { attachWeatherSoon } from '../lib/autoWeather'
+import { PATTERN_COLORS, dogPatterns, type Pattern } from './shared'
 import { nowLocalISO } from '../lib/format'
 
 export default function Seizure() {
@@ -12,7 +13,8 @@ export default function Seizure() {
   const nav = useNavigate()
   const dog = useDog()
   const [startAt, setStartAt] = useState<number | null>(null)
-  const [pattern, setPattern] = useState<'A' | 'B' | undefined>(undefined)
+  const [pattern, setPattern] = useState<Pattern | undefined>(undefined)
+  const patterns = dogPatterns(dog)
   const [elapsed, setElapsed] = useState(0)
   const [rescueAt, setRescueAt] = useState<string | null>(null)
   const [videoOn, setVideoOn] = useState(false)
@@ -38,7 +40,7 @@ export default function Seizure() {
     wakeRef.current?.release().catch(() => {})
   }
 
-  async function start(p: 'A' | 'B') {
+  async function start(p?: Pattern) {
     setPattern(p)
     setStartAt(Date.now())
     try {
@@ -117,17 +119,24 @@ export default function Seizure() {
   if (startAt == null)
     return (
       <div className="big">
-        <div className="patterns">
-          <button className="circle pa" onClick={() => start('A')}>
-            {t('seizure.patternA')}
-            <small>{dog?.seizurePatterns?.A || t('seizure.tapStart')}</small>
+        {patterns.length === 1 ? (
+          <button className="circle" onClick={() => start(undefined)}>
+            {t('btn.seizureStart')}
+            <small>{t('seizure.tapStart')}</small>
           </button>
-          <button className="circle pb" onClick={() => start('B')}>
-            {t('seizure.patternB')}
-            <small>{dog?.seizurePatterns?.B || t('seizure.tapStart')}</small>
-          </button>
-        </div>
-        <div className="note" style={{ textAlign: 'center' }}>{t('seizure.patternHint')}</div>
+        ) : (
+          <>
+            <div className="patterns">
+              {patterns.map((p) => (
+                <button key={p} className={'circle p' + patterns.length} style={{ background: PATTERN_COLORS[p], boxShadow: `0 12px 30px ${PATTERN_COLORS[p]}59` }} onClick={() => start(p)}>
+                  {t('seizure.pattern' + p)}
+                  <small>{dog?.seizurePatterns?.[p] || t('seizure.tapStart')}</small>
+                </button>
+              ))}
+            </div>
+            <div className="note" style={{ textAlign: 'center' }}>{t('seizure.patternHint')}</div>
+          </>
+        )}
         <div className="note" style={{ textAlign: 'center' }}>
           {t('seizure.videoOpt')}: {dog?.recordVideo ? t('seizure.on') : t('seizure.off')}
           {dog?.recordVideo && (

@@ -4,18 +4,22 @@ import type { TFunction } from 'i18next'
 import type { Event, Medication } from '../db'
 
 export function EventTag({ e }: { e: Event }) {
-  const cls = e.kind === 'seizure' ? (e.pattern === 'B' ? 's b' : 's') : e.kind === 'unusual' ? 'u' : 'g'
+  const cls = e.kind === 'seizure' ? (e.pattern === 'B' ? 's b' : e.pattern === 'C' ? 's c' : 's') : e.kind === 'unusual' ? 'u' : 'g'
   const label = e.kind === 'seizure' ? '発作' + (e.pattern ?? '') : e.kind === 'unusual' ? 'いつもと違う' : 'その他'
   return <span className={'tag ' + cls}>{label}</span>
 }
 /** "発作A（全身の痙攣）" style label; falls back to the plain word when no pattern is set. */
-export function seizureName(e: { pattern?: 'A' | 'B' }, t: TFunction, dog?: { seizurePatterns?: { A?: string; B?: string } }) {
+export type Pattern = 'A' | 'B' | 'C'
+export const PATTERN_COLORS: Record<Pattern, string> = { A: '#4A2F9E', B: '#7B63C7', C: '#B3A3E3' }
+/** Patterns this dog uses (A always; B/C when enabled in Settings). */
+export const dogPatterns = (dog?: { patternCount?: number }): Pattern[] => (['A', 'B', 'C'] as Pattern[]).slice(0, Math.min(3, Math.max(1, dog?.patternCount ?? 1)))
+export function seizureName(e: { pattern?: Pattern }, t: TFunction, dog?: { seizurePatterns?: { A?: string; B?: string; C?: string } }) {
   if (!e.pattern) return t('event.seizure')
   const desc = dog?.seizurePatterns?.[e.pattern]
   return `${t('event.seizure')}${e.pattern}${desc ? `（${desc}）` : ''}`
 }
 
-export function eventLabel(e: Event, t: TFunction, _lang?: string, dog?: { seizurePatterns?: { A?: string; B?: string } }) {
+export function eventLabel(e: Event, t: TFunction, _lang?: string, dog?: { seizurePatterns?: { A?: string; B?: string; C?: string } }) {
   if (e.kind === 'seizure') {
     const n = e.count && e.count > 1 ? ` ×${e.count}` : ''
     return `${seizureName(e, t, dog)}${n}${e.estimated ? ` (${t('event.estimated')})` : ''}`
