@@ -5,7 +5,7 @@ import { latestWeight, useDog, useLabs, useMeds, useRefs } from '../lib/useData'
 import { classifyTiming, ruleFor, type TimingClass } from '../lib/monitoring'
 import { findRange, normalize } from '../lib/normalize'
 import { fmtDate, nowLocalISO, today } from '../lib/format'
-import { ANALYTES, DRUG_ANALYTES, defaultSchedule, isScheduledMed, parseTimesInput, useDrugOptions } from './shared'
+import { ANALYTES, DRUG_ANALYTES, dailyMg, defaultSchedule, isScheduledMed, isUniformDose, medSlots, parseTimesInput, slotDose, useDrugOptions } from './shared'
 import LabPhotoImport from './LabPhotoImport'
 import { labImageUrl } from '../lib/supabase'
 import { normaliseUnit, uploadImage, type Extracted } from '../lib/labImport'
@@ -52,7 +52,7 @@ export default function MedsLabs() {
   const [editing, setEditing] = useState<string | null>(null)
   const [dose, setDose] = useState({ date: today(), mgPerDose: '', timesPerDay: '2', reason: '' })
   const [addingMed, setAddingMed] = useState(false)
-  const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2', firstTime: '08:00', everyH: '12', scheduled: true })
+  const [newMed, setNewMed] = useState({ generic: 'phenobarbital', kind: 'maintenance', startDate: today(), mgPerDose: '', timesPerDay: '2', firstTime: '08:00', everyH: '12', scheduled: true, perSlot: false, slotMg: {} as Record<string, string> })
   /** Daily dose times built like the plan form: first time, then every N hours, n times (wrapping past midnight). */
   const builtTimes = (firstTime: string, n: number, everyH: number) => {
     const [h, mi] = firstTime.split(':').map(Number)
@@ -93,7 +93,7 @@ export default function MedsLabs() {
     for (const p of open) await db.dosePlans.update(p.id, { cancelled: true })
   }
   async function saveMed() {
-    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: newTimes, scheduled: newMed.kind === 'maintenance' ? undefined : newMed.scheduled, updatedAt: today() })
+    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose || newMed.perSlot ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose) || (newMed.perSlot ? Number(newMed.slotMg[newTimes[0]]) || undefined : undefined), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: newTimes, slotDoses: newMed.perSlot ? Object.fromEntries(newTimes.map((s) => [s, Number(newMed.slotMg[s]) || 0])) : undefined, scheduled: newMed.kind === 'maintenance' ? undefined : newMed.scheduled, updatedAt: today() })
     setAddingMed(false)
   }
   async function saveLab() {
@@ -187,7 +187,9 @@ export default function MedsLabs() {
         </h4>
         {[...meds].sort((a, b) => (a.endDate ? 1 : 0) - (b.endDate ? 1 : 0)).map((m) => {
           const d = currentDose(m)
-          const mgkg = d?.mgPerDose && kg ? ((d.mgPerDose * d.timesPerDay) / kg).toFixed(2) : null
+          const uniform = isUniformDose(m)
+          const daily = dailyMg(m)
+          const mgkg = daily != null && kg ? (daily / kg).toFixed(2) : null
           const rule = ruleFor(m.generic)
           return (
             <div key={m.id} className={'medcard ' + m.kind + (m.endDate ? ' stopped' : '')}>
@@ -197,8 +199,8 @@ export default function MedsLabs() {
                   {m.endDate && <span className="tag g">{t('meds.stopped')} {fmtDate(m.endDate, i18n.language)}</span>}
                 </div>
                 <div className="meddose">
-                  {d?.mgPerDose ? `${d.mgPerDose} mg × ${d.timesPerDay}` : d ? `× ${d.timesPerDay}/日` : <span className="note">{t('meds.doseUnknown')}</span>}
-                  {mgkg && <div className="note">{mgkg} {t('meds.mgkg')}/日</div>}
+                  {uniform ? (d?.mgPerDose ? `${d.mgPerDose} mg × ${medSlots(m).length}` : d ? `× ${d.timesPerDay}/日` : <span className="note">{t('meds.doseUnknown')}</span>) : medSlots(m).map((s) => <div key={s}>{s} {slotDose(m, s) ?? '?'} mg</div>)}
+                  {mgkg && <div className="note">{daily} mg/日 = {mgkg} {t('meds.mgkg')}/日</div>}
                 </div>
               </div>
               {rule && <div className="note">{rule.note[i18n.language === 'en' ? 'en' : 'ja']}</div>}
@@ -209,6 +211,14 @@ export default function MedsLabs() {
                 <div className="field"><span className="k">{t('meds.schedule')}</span>
                   <input defaultValue={(m.scheduleTimes ?? defaultSchedule(d?.timesPerDay ?? 2)).join(', ')} onBlur={(e) => db.medications.update(m.id, { scheduleTimes: parseTimesInput(e.target.value).length ? parseTimesInput(e.target.value) : m.scheduleTimes })} />
                 </div>
+              )}
+              {isScheduledMed(m) && !m.endDate && (
+                <>
+                  <div className="row"><span className="grow">{t('meds.perSlotToggle')}</span><button className={'toggle ' + (m.slotDoses ? 'on' : '')} onClick={() => db.medications.update(m.id, { slotDoses: m.slotDoses ? undefined : Object.fromEntries(medSlots(m).map((s) => [s, d?.mgPerDose ?? 0])) })} /></div>
+                  {m.slotDoses && medSlots(m).map((s) => (
+                    <div className="field" key={s}><span className="k">{s}</span><input type="number" step="any" inputMode="decimal" defaultValue={m.slotDoses?.[s] ?? ''} onBlur={(e) => db.medications.update(m.id, { slotDoses: { ...(m.slotDoses ?? {}), [s]: Number(e.target.value) || 0 } })} /><span className="note">mg</span></div>
+                  ))}
+                </>
               )}
               <div className="medactions">
                 <button className="btn sec sm" onClick={() => setEditing(editing === m.id ? null : m.id)}>{t('meds.change')}</button>
@@ -256,6 +266,10 @@ export default function MedsLabs() {
               <div className="row"><span className="grow">{t('meds.dailyToggle')}</span><button className={'toggle ' + (newMed.scheduled ? 'on' : '')} onClick={() => setNewMed({ ...newMed, scheduled: !newMed.scheduled })} /></div>
             )}
             <div className="note">{t('meds.schedule')}: {newTimes.join(', ')}　{t('meds.scheduleHint')}</div>
+            <div className="row"><span className="grow">{t('meds.perSlotToggle')}</span><button className={'toggle ' + (newMed.perSlot ? 'on' : '')} onClick={() => setNewMed({ ...newMed, perSlot: !newMed.perSlot })} /></div>
+            {newMed.perSlot && newTimes.map((s) => (
+              <div className="field" key={s}><span className="k">{s}</span><input type="number" step="any" inputMode="decimal" value={newMed.slotMg[s] ?? newMed.mgPerDose} onChange={(e) => setNewMed({ ...newMed, slotMg: { ...newMed.slotMg, [s]: e.target.value } })} /><span className="note">mg</span></div>
+            ))}
             <div style={{ display: 'flex', gap: 6 }}><button className="btn sm" onClick={saveMed}>{t('btn.save')}</button><button className="btn sec sm" onClick={() => setAddingMed(false)}>{t('btn.cancel')}</button></div>
           </div>
         ) : (

@@ -116,6 +116,8 @@ export interface Medication {
   doses: DoseChange[]
   /** Planned clock times, e.g. ["08:00","20:00"]. */
   scheduleTimes?: string[]
+  /** Per-slot amounts (mg) when the dose differs by time of day, keyed by slot time ("00:00"). Absent = same amount every slot. */
+  slotDoses?: Record<string, number>
   /** Rescue/trial drugs: true = given every day at scheduleTimes (shown on Home, reminders). Maintenance is always scheduled. */
   scheduled?: boolean
   misses?: string[]

@@ -10,7 +10,7 @@ import { currentUserId } from '../lib/cloud'
 import { monthlyRows, ymOf } from '../lib/monthly'
 import { addDays, daysBetween, fmtDur, fmtMD, nowLocalISO, today } from '../lib/format'
 import { nextCheck, ruleFor } from '../lib/monitoring'
-import { CODES, EventTag, coversSlot, currentDose, defaultSchedule, eventLabel, isActiveMed, isScheduledMed, nearestSlotDate } from './shared'
+import { CODES, EventTag, coversSlot, currentDose, dailyMg, defaultSchedule, eventLabel, isActiveMed, isScheduledMed, isUniformDose, nearestSlotDate, slotDose } from './shared'
 
 const GENERIC_TO_ANALYTE: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV' }
 
@@ -58,7 +58,7 @@ export default function Home() {
     // idempotent: a second tap (or a tap before sync caught up) must not create a duplicate record
     const dup = await db.doseLogs.where('dogId').equals(dog!.id).filter((l) => l.medicationId === m.id && coversSlot(l, slotDate, slot)).first()
     if (dup) return
-    const log: DoseLog = { id: uid(), dogId: dog!.id, medicationId: m.id, generic: m.generic, time: t, slot, slotDate, kind: 'scheduled', mgPerDose: d?.mgPerDose, by: currentUserId() ?? undefined }
+    const log: DoseLog = { id: uid(), dogId: dog!.id, medicationId: m.id, generic: m.generic, time: t, slot, slotDate, kind: 'scheduled', mgPerDose: slotDose(m, slot) ?? d?.mgPerDose, by: currentUserId() ?? undefined }
     await db.doseLogs.add(log)
   }
   const nowIso = nowLocalISO()
@@ -144,23 +144,25 @@ export default function Home() {
         {activeMeds.map((m) => {
           const d = currentDose(m)
           const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(d?.timesPerDay ?? 2)
-          const mgkg = d?.mgPerDose && kg ? ` (${(d.mgPerDose / kg).toFixed(2)} mg/kg)` : ''
+          const uniform = isUniformDose(m)
+          const daily = dailyMg(m)
+          const mgkg = d?.mgPerDose && kg && uniform ? ` (${(d.mgPerDose / kg).toFixed(2)} mg/kg)` : ''
           return (
             <div key={m.id} className="dose-row">
               <div className="dose-name">
                 <b>{t('meds.generics.' + m.generic, m.generic)}</b>
-                <span className="note">{d?.mgPerDose ? ` ${d.mgPerDose} mg${mgkg}` : ''}</span>
+                <span className="note">{uniform ? (d?.mgPerDose ? ` ${d.mgPerDose} mg${mgkg}` : '') : daily != null ? ` ${t('dose.daily')} ${daily} mg${kg ? ` (${(daily / kg).toFixed(2)} mg/kg/日)` : ''}` : ''}</span>
               </div>
               <div className="dose-slots">
                 {slots.map((slot) => {
                   const log = doseLogs.find((l) => l.medicationId === m.id && coversSlot(l, now, slot))
                   return log ? (
                     <button key={slot} className="dose-btn done" onClick={() => undoDose(log)} title={t('dose.undo')}>
-                      ✓ {slot} <small>{log.time.slice(11, 16)}</small>
+                      ✓ {slot}{!uniform && slotDose(m, slot) != null ? <small>{slotDose(m, slot)}mg</small> : null} <small>{log.time.slice(11, 16)}</small>
                     </button>
                   ) : (
                     <button key={slot} className="dose-btn" onClick={() => giveDose(m, slot)}>
-                      {slot} {t('dose.give')}
+                      {slot}{!uniform && slotDose(m, slot) != null ? <small> {slotDose(m, slot)}mg</small> : null} {t('dose.give')}
                     </button>
                   )
                 })}

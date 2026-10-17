@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { latestWeight, useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useRefs } from '../lib/useData'
-import { defaultSchedule, isActiveMed, isScheduledMed } from './shared'
+import { dailyMg, defaultSchedule, isActiveMed, isScheduledMed, isUniformDose, medSlots, slotDose } from './shared'
 import { buildEpisodes } from '../lib/episodes'
 import { monthlyRows } from '../lib/monthly'
 import { addDays, daysBetween, fmtDate, fmtDur, today } from '../lib/format'
@@ -89,11 +89,12 @@ export default function VetReport() {
           <tbody>
             {meds.map((m) => {
               const d = currentDose(m)
-              const mgkg = d?.mgPerDose && kg ? `${((d.mgPerDose * d.timesPerDay) / kg).toFixed(2)} mg/kg/日` : ''
+              const daily = dailyMg(m)
+              const mgkg = daily != null && kg ? `${(daily / kg).toFixed(2)} mg/kg/日` : ''
               return (
                 <tr key={m.id}>
                   <td>{t('meds.generics.' + m.generic, m.generic)} <span className="note">{t('meds.kinds.' + m.kind)}</span></td>
-                  <td className="n">{d?.mgPerDose ? `${d.mgPerDose} mg × ${d.timesPerDay}　${mgkg}` : d ? `× ${d.timesPerDay}` : t('meds.doseUnknown')}</td>
+                  <td className="n">{isUniformDose(m) ? (d?.mgPerDose ? `${d.mgPerDose} mg × ${medSlots(m).length}　${mgkg}` : d ? `× ${d.timesPerDay}` : t('meds.doseUnknown')) : `${medSlots(m).map((s) => `${s} ${slotDose(m, s) ?? '?'}mg`).join(' / ')}　${mgkg}`}</td>
                 </tr>
               )
             })}

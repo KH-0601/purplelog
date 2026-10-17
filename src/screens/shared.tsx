@@ -100,6 +100,19 @@ export const coversSlot = (l: { slotDate?: string; time: string; slot?: string }
 export const defaultSchedule = (timesPerDay: number) => (timesPerDay >= 3 ? ['07:00', '15:00', '23:00'] : timesPerDay === 2 ? ['08:00', '20:00'] : ['08:00'])
 
 export const currentDose = (m: Medication) => [...m.doses].sort((a, b) => a.date.localeCompare(b.date)).pop()
+/** Slots this medication is given at. */
+export const medSlots = (m: Medication) => (m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(currentDose(m)?.timesPerDay ?? 2))
+/** Amount for one slot: per-slot value if set, else the current uniform dose. */
+export const slotDose = (m: Medication, slot: string): number | undefined => m.slotDoses?.[slot] ?? currentDose(m)?.mgPerDose
+/** True when every slot gets the same amount (so one ✓ / one number is enough). */
+export const isUniformDose = (m: Medication) => !m.slotDoses || medSlots(m).every((s) => m.slotDoses![s] == null || m.slotDoses![s] === currentDose(m)?.mgPerDose)
+/** Total mg per day across the slots (undefined if any amount is unknown). */
+export function dailyMg(m: Medication): number | undefined {
+  const slots = medSlots(m)
+  const amounts = slots.map((s) => slotDose(m, s))
+  if (amounts.some((a) => a == null)) return undefined
+  return amounts.reduce((a, b) => a! + b!, 0)
+}
 /** Active unless stopped: a medication stopped on `endDate` is out of the schedule from that day on. */
 /** Appears in Home's daily doses and in reminders: maintenance always; rescue/trial only when marked as daily. */
 export const isScheduledMed = (m: Medication) => m.kind === 'maintenance' || m.scheduled === true
