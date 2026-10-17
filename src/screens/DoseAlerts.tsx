@@ -17,8 +17,8 @@ export default function DoseAlerts() {
   const dogs = useDogs()
   const meds = useLiveQuery(() => db.medications.toArray(), []) ?? NONE
   const plans = useLiveQuery(() => db.dosePlans.toArray(), []) ?? NONE
-  const today = toLocalISO(new Date()).slice(0, 10)
-  const logs = useLiveQuery(() => db.doseLogs.where('time').aboveOrEqual(today).toArray(), [today]) ?? NONE
+  const since = toLocalISO(new Date(Date.now() - 36 * 3600 * 1000)).slice(0, 10)
+  const logs = useLiveQuery(() => db.doseLogs.where('time').aboveOrEqual(since).toArray(), [since]) ?? NONE
   const [shown, setShown] = useState<DueItem[]>([])
   const latest = useRef({ dogs, meds, plans, logs })
   latest.current = { dogs, meds, plans, logs }

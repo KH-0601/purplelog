@@ -64,6 +64,21 @@ export const SEIZURE_TYPES = ['generalized_tonic_clonic', 'focal', 'focal_behavi
 
 export const SEX_OPTIONS = ['male', 'male_neutered', 'female', 'female_spayed', 'unknown'] as const
 
+/** Reminders repeat only within this many minutes after the slot time; later the dose simply shows as unrecorded. */
+export const REMIND_WINDOW_MIN = 360
+/** "24:00" (and "7:30") → "00:00" / "07:30"; invalid strings are dropped. Sorted, unique. */
+export function normaliseTimes(list: string[]): string[] {
+  const out = new Set<string>()
+  for (const raw of list) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim())
+    if (!m) continue
+    const h = Number(m[1]) % 24, mi = Number(m[2])
+    if (mi > 59) continue
+    out.add(`${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`)
+  }
+  return [...out].sort()
+}
+export const parseTimesInput = (v: string) => normaliseTimes(v.split(/[,、\s]+/))
 /** The date of the slot occurrence nearest to `atLocalIso` (yesterday / today / tomorrow). */
 export function nearestSlotDate(slot: string, atLocalIso: string): string {
   const at = new Date(atLocalIso.slice(0, 16)).getTime()

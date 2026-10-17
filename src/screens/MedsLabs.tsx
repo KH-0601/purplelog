@@ -5,7 +5,7 @@ import { latestWeight, useDog, useLabs, useMeds, useRefs } from '../lib/useData'
 import { classifyTiming, ruleFor, type TimingClass } from '../lib/monitoring'
 import { findRange, normalize } from '../lib/normalize'
 import { fmtDate, nowLocalISO, today } from '../lib/format'
-import { ANALYTES, DRUG_ANALYTES, defaultSchedule, isScheduledMed, useDrugOptions } from './shared'
+import { ANALYTES, DRUG_ANALYTES, defaultSchedule, isScheduledMed, parseTimesInput, useDrugOptions } from './shared'
 import LabPhotoImport from './LabPhotoImport'
 import { labImageUrl } from '../lib/supabase'
 import { normaliseUnit, uploadImage, type Extracted } from '../lib/labImport'
@@ -207,7 +207,7 @@ export default function MedsLabs() {
               )}
               {isScheduledMed(m) && !m.endDate && (
                 <div className="field"><span className="k">{t('meds.schedule')}</span>
-                  <input defaultValue={(m.scheduleTimes ?? defaultSchedule(d?.timesPerDay ?? 2)).join(', ')} onBlur={(e) => db.medications.update(m.id, { scheduleTimes: e.target.value.split(/[,、\s]+/).map((x) => x.trim()).filter((x) => /^\d{1,2}:\d{2}$/.test(x)).map((x) => x.padStart(5, '0')) })} />
+                  <input defaultValue={(m.scheduleTimes ?? defaultSchedule(d?.timesPerDay ?? 2)).join(', ')} onBlur={(e) => db.medications.update(m.id, { scheduleTimes: parseTimesInput(e.target.value).length ? parseTimesInput(e.target.value) : m.scheduleTimes })} />
                 </div>
               )}
               <div className="medactions">

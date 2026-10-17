@@ -4,7 +4,7 @@
  * until the dose is marked as given. Works while the app is open; a closed app needs push (later).
  */
 import type { DoseLog, DosePlan, Medication } from '../db'
-import { coversSlot, currentDose, defaultSchedule, isActiveMed, isScheduledMed } from '../screens/shared'
+import { REMIND_WINDOW_MIN, coversSlot, currentDose, defaultSchedule, isActiveMed, isScheduledMed } from '../screens/shared'
 
 export interface DueItem {
   key: string
@@ -33,13 +33,13 @@ export function computeDue(meds: Medication[], plans: DosePlan[], logs: DoseLog[
       const given = logs.some((l) => l.medicationId === m.id && coversSlot(l, today, slot))
       if (given) continue
       const overdueMin = (now.getTime() - new Date(due).getTime()) / 60000
-      if (overdueMin > 0) out.push({ key: `r:${m.id}:${due}`, kind: 'routine', medicationId: m.id, generic: m.generic, due, slot, mgPerDose: d?.mgPerDose, overdueMin })
+      if (overdueMin > 0 && overdueMin <= REMIND_WINDOW_MIN) out.push({ key: `r:${m.id}:${due}`, kind: 'routine', medicationId: m.id, generic: m.generic, due, slot, mgPerDose: d?.mgPerDose, overdueMin })
     }
   }
   for (const p of plans) {
     if (p.doneLogId || p.cancelled) continue
     const overdueMin = (now.getTime() - new Date(p.time).getTime()) / 60000
-    if (overdueMin > 0) out.push({ key: `p:${p.id}`, kind: 'plan', medicationId: p.medicationId, generic: p.generic, due: p.time, planId: p.id, mgPerDose: p.mgPerDose, overdueMin })
+    if (overdueMin > 0 && overdueMin <= REMIND_WINDOW_MIN) out.push({ key: `p:${p.id}`, kind: 'plan', medicationId: p.medicationId, generic: p.generic, due: p.time, planId: p.id, mgPerDose: p.mgPerDose, overdueMin })
   }
   return out.sort((a, b) => a.due.localeCompare(b.due))
 }

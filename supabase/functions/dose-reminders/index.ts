@@ -10,6 +10,8 @@ const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY')!
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:koz2030@gmail.com'
 const REMIND_MIN = Number(Deno.env.get('REMIND_MIN') ?? '30')
+// Remind only within this window after the slot time; later it just shows as unrecorded in the app.
+const REMIND_WINDOW_MIN = 360
 const CRON_SECRET = Deno.env.get('CRON_SECRET')
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
@@ -84,14 +86,14 @@ Deno.serve(async (req) => {
       for (const slot of slots) {
         const dueAt = `${today}T${slot}`
         const mins = minutesBetween(dueAt, nowLocal)
-        if (mins <= 0) continue
+        if (mins <= 0 || mins > REMIND_WINDOW_MIN) continue
         const given = logs.some((l) => l.medicationId === m.id && (l.slot ? l.slot === slot && (l.slotDate ?? l.time.slice(0, 10)) === today : l.time.startsWith(today) && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3))
         if (!given) due.push({ key: `r:${m.id}:${dueAt}`, dogId: dog.id, text: `${dog.name}: ${NAMES[m.generic] ?? m.generic} ${slot}`, minutes: mins })
       }
     }
     for (const p of plans.filter((x) => x.dogId === dog.id && !x.doneLogId && !x.cancelled)) {
       const mins = minutesBetween(p.time.slice(0, 16), nowLocal)
-      if (mins > 0) due.push({ key: `p:${p.id}`, dogId: dog.id, text: `${dog.name}: ${NAMES[p.generic] ?? p.generic}（頓服）${p.time.slice(5, 16).replace('T', ' ')}`, minutes: mins })
+      if (mins > 0 && mins <= REMIND_WINDOW_MIN) due.push({ key: `p:${p.id}`, dogId: dog.id, text: `${dog.name}: ${NAMES[p.generic] ?? p.generic}（頓服）${p.time.slice(5, 16).replace('T', ' ')}`, minutes: mins })
     }
   }
   if (!due.length) return new Response(JSON.stringify({ due: 0 }))
