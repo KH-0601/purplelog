@@ -21,7 +21,7 @@ const ja = {
     items: { mania: '躁状態', pica: '誤食', elimination: '排泄異常', ataxia: 'ふらつき', weakness: '足の力がない', lethargy: '元気がない', appetite_down: '食欲の低下', appetite_up: '食欲の増加', weight: '体重の変化', skin: '皮膚・被毛の変化', pacing: '徘徊', vomiting: '嘔吐', hyperactive: 'ハイテンション', eye_twitch: '目の症状', urination: '排尿の異常', other: 'その他' },
     estimated: '推定', timeUnknown: '時刻不明',
   },
-  timeline: { title: 'タイムライン', cluster: '群発エピソード', seizures: '回', hours: '時間', doseChange: '投薬変更', doseLog: '投薬', prnLog: '頓服', showPrn: '頓服を表示', lab: '検査', weight: '体重', unusualNear: 'この検査の前後30日の「いつもと違う日」', none: 'なし', monthly: '月次記録（日付なし）', showDoses: '投薬の記録を表示' },
+  timeline: { title: 'タイムライン', cluster: '群発エピソード', seizures: '回', hours: '時間', doseChange: '投薬変更', doseLog: '投薬', prnLog: '頓服', showPrn: '頓服を表示', clusterMembers: 'この群発に含まれる発作（タップで開く）', lab: '検査', weight: '体重', unusualNear: 'この検査の前後30日の「いつもと違う日」', none: 'なし', monthly: '月次記録（日付なし）', showDoses: '投薬の記録を表示' },
   meds: {
     title: '投薬と検査', editLab: '修正', deleteLabConfirm: '{{date}} の検査結果を削除します。よろしいですか？', current: '現在の投薬', history: '変更履歴', change: '変更する', labs: '血中濃度・検査', addLab: '検査を記録する', analyte: '項目', value: '値', unit: '単位', date: '採血日時', lastDose: '最終投与', hoursSince: '時間前', timing: 'タイミング',
     trough: '次回投与前（トラフ）', post_dose: '投与後', not_applicable: '（タイミング不問）', unknown: '不明', sameAsPrev: '前回と一致', diffFromPrev: '前回と採血タイミングが異なります',
@@ -87,7 +87,7 @@ const en: typeof ja = {
     items: { mania: 'Manic', pica: 'Ate something odd', elimination: 'Elimination problem', ataxia: 'Wobbly', weakness: 'Weak legs', lethargy: 'Lethargic', appetite_down: 'Less appetite', appetite_up: 'More appetite', weight: 'Weight change', skin: 'Skin / coat change', pacing: 'Pacing', vomiting: 'Vomiting', hyperactive: 'Hyperactive', eye_twitch: 'Eye symptoms', urination: 'Urination problem', other: 'Other' },
     estimated: 'estimated', timeUnknown: 'time unknown',
   },
-  timeline: { title: 'Timeline', cluster: 'Cluster episode', seizures: 'seizures', hours: 'h', doseChange: 'Dose change', doseLog: 'Dose given', prnLog: 'As-needed', showPrn: 'Show as-needed', lab: 'Lab', weight: 'Weight', unusualNear: '“Not normal” days within 30 days of this lab', none: 'none', monthly: 'Monthly records (no dates)', showDoses: 'Show doses given' },
+  timeline: { title: 'Timeline', cluster: 'Cluster episode', seizures: 'seizures', hours: 'h', doseChange: 'Dose change', doseLog: 'Dose given', prnLog: 'As-needed', showPrn: 'Show as-needed', clusterMembers: 'Seizures in this cluster (tap to open)', lab: 'Lab', weight: 'Weight', unusualNear: '“Not normal” days within 30 days of this lab', none: 'none', monthly: 'Monthly records (no dates)', showDoses: 'Show doses given' },
   meds: {
     title: 'Medication & labs', editLab: 'Edit', deleteLabConfirm: 'Delete the lab results of {{date}}?', current: 'Current medication', history: 'Changes', change: 'Change', labs: 'Serum levels & labs', addLab: 'Add lab result', analyte: 'Analyte', value: 'Value', unit: 'Unit', date: 'Sampling time', lastDose: 'Last dose', hoursSince: 'h ago', timing: 'Timing',
     trough: 'Before next dose (trough)', post_dose: 'Post-dose', not_applicable: '(timing not critical)', unknown: 'unknown', sameAsPrev: 'same as previous', diffFromPrev: 'Timing differs from the previous sample',

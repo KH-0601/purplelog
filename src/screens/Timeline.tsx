@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { db } from '../db'
+import { db, type Event } from '../db'
 import { useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useNames } from '../lib/useData'
 import { buildEpisodes } from '../lib/episodes'
 import { daysBetween, fmtDate, fmtDur } from '../lib/format'
-import { eventLabel } from './shared'
+import { EventTag, eventLabel } from './shared'
 
-type Item = { date: string; kind: 'cluster' | 'seizure' | 'unusual' | 'other' | 'dose' | 'doseLog' | 'prnLog' | 'lab' | 'weight'; label: string; sub?: string; id?: string; by?: string; logId?: string }
+type Item = { date: string; kind: 'cluster' | 'seizure' | 'unusual' | 'other' | 'dose' | 'doseLog' | 'prnLog' | 'lab' | 'weight'; label: string; sub?: string; id?: string; by?: string; logId?: string; members?: string[] }
 
 export default function Timeline() {
   const { t, i18n } = useTranslation()
@@ -20,8 +20,15 @@ export default function Timeline() {
   const doseLogs = useDoseLogs(dog?.id)
   const [open, setOpen] = useState<string | null>(null)
   const [showMonthly, setShowMonthly] = useState(false)
-  const [showDoses, setShowDoses] = useState(true)
-  const [showPrn, setShowPrn] = useState(true)
+  // filter state survives opening a record and coming back (per device)
+  const FILTER_KEY = 'purplelog.timeline.filters'
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') as { doses?: boolean; prn?: boolean } } catch { return {} } })()
+  const [showDoses, setShowDosesState] = useState(saved.doses ?? true)
+  const [showPrn, setShowPrnState] = useState(saved.prn ?? true)
+  const persist = (doses: boolean, prn: boolean) => { try { localStorage.setItem(FILTER_KEY, JSON.stringify({ doses, prn })) } catch { /* ignore */ } }
+  const setShowDoses = (v: boolean) => { setShowDosesState(v); persist(v, showPrn) }
+  const setShowPrn = (v: boolean) => { setShowPrnState(v); persist(showDoses, v) }
+  const [openCluster, setOpenCluster] = useState<string | null>(null)
   const names = useNames([...events.map((e) => e.by), ...doseLogs.map((l) => l.by)])
   if (!dog) return null
 
@@ -29,7 +36,7 @@ export default function Timeline() {
   const eps = buildEpisodes(events)
   for (const ep of eps) {
     if (ep.seizures >= 2) {
-      items.push({ date: ep.start, kind: 'cluster', label: `${t('timeline.cluster')} ${ep.seizures}${t('timeline.seizures')}${ep.hours > 0 ? ` / ${Math.round(ep.hours)}${t('timeline.hours')}` : ''}`, id: ep.eventIds[0] })
+      items.push({ date: ep.start, kind: 'cluster', label: `${t('timeline.cluster')} ${ep.seizures}${t('timeline.seizures')}${ep.hours > 0 ? ` / ${Math.round(ep.hours)}${t('timeline.hours')}` : ''}`, id: ep.eventIds[0], members: ep.eventIds })
     } else {
       const e = events.find((x) => x.id === ep.eventIds[0])!
       items.push({ date: e.start, kind: 'seizure', label: `${eventLabel(e, t, undefined, dog)} ${fmtDur(e.durationSec, e.durationText)}`, sub: e.note, id: e.id, by: e.by })
@@ -69,18 +76,30 @@ export default function Timeline() {
           const who = it.by && names[it.by] ? names[it.by] : ''
           return (
             <div key={i}>
-              <div className="row" style={{ cursor: it.id || isLab ? 'pointer' : 'default' }} onClick={() => (isLab ? setOpen(open === it.id ? null : it.id!) : it.id ? nav(`/event/${it.id}`) : undefined)}>
+              <div className="row" style={{ cursor: it.id || isLab ? 'pointer' : 'default' }} onClick={() => (isLab ? setOpen(open === it.id ? null : it.id!) : it.members ? setOpenCluster(openCluster === it.id ? null : it.id!) : it.id ? nav(`/event/${it.id}`) : undefined)}>
                 <span className="d">{dateLabel(it.date)}</span>
                 <span className="grow">
                   {it.label}
                   {who && <span className="note"> · {who}</span>}
                   {it.sub && <div className="note">{it.sub}</div>}
                 </span>
-                <span className={'tag ' + cls}>{lbl}</span>
+                <span className={'tag ' + cls}>{lbl}{it.members ? (openCluster === it.id ? ' ▴' : ' ▾') : ''}</span>
                 {it.logId && (
                   <button className="tag g" onClick={(ev) => { ev.stopPropagation(); if (confirm(t('dose.undoConfirm'))) db.doseLogs.delete(it.logId!) }}>×</button>
                 )}
               </div>
+              {it.members && openCluster === it.id && (
+                <div className="wx" style={{ fontFamily: 'inherit', marginBottom: 6 }}>
+                  <div className="note">{t('timeline.clusterMembers')}</div>
+                  {it.members.map((id) => events.find((e) => e.id === id)).filter((e): e is Event => !!e).map((e) => (
+                    <div className="row" key={e.id} style={{ cursor: 'pointer' }} onClick={() => nav(`/event/${e.id}`)}>
+                      <span className="d">{dateLabel(e.start)}</span>
+                      <span className="grow">{eventLabel(e, t, undefined, dog)} {fmtDur(e.durationSec, e.durationText)}{e.note && <div className="note">{e.note}</div>}</span>
+                      <EventTag e={e} />
+                    </div>
+                  ))}
+                </div>
+              )}
               {isLab && open === it.id && (
                 <div className="wx" style={{ fontFamily: 'inherit', marginBottom: 6 }}>
                   <div className="note">{t('timeline.unusualNear')}</div>
