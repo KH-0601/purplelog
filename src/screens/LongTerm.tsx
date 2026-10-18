@@ -22,7 +22,7 @@ export default function LongTerm() {
           </button>
         ))}
       </div>
-      <LongTermChart events={events} monthly={monthly} meds={meds} labs={labs} refs={refs} period={period} />
+      <LongTermChart events={events} monthly={monthly} meds={meds} labs={labs} refs={refs} period={period} dog={dog} />
     </>
   )
 }

@@ -125,7 +125,7 @@ export default function VetReport() {
         </table>
         <div className="note">{t('report.troughFooter')}。{t('report.weatherFooter')}</div>
       </div>
-      <LongTermChart events={events} monthly={monthly} meds={meds} labs={labs} refs={refs} period={period} compact />
+      <LongTermChart events={events} monthly={monthly} meds={meds} labs={labs} refs={refs} period={period} compact dog={dog} />
     </>
   )
 }

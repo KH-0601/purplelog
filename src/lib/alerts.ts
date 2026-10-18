@@ -4,7 +4,7 @@
  * until the dose is marked as given. Works while the app is open; a closed app needs push (later).
  */
 import type { DoseLog, DosePlan, Medication } from '../db'
-import { REMIND_WINDOW_MIN, coversSlot, currentDose, defaultSchedule, isActiveMed, isScheduledMed, slotDose } from '../screens/shared'
+import { REMIND_WINDOW_MIN, coversSlot, currentDose, defaultSchedule, dueDateFor, isActiveMed, isScheduledMed, slotDose, slotMs } from '../screens/shared'
 
 export interface DueItem {
   key: string
@@ -29,10 +29,11 @@ export function computeDue(meds: Medication[], plans: DosePlan[], logs: DoseLog[
     const d = currentDose(m)
     const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(d?.timesPerDay ?? 2)
     for (const slot of slots) {
-      const due = `${today}T${slot}`
-      const given = logs.some((l) => l.medicationId === m.id && coversSlot(l, today, slot))
+      const date = dueDateFor(slot, today)
+      const due = `${date}T${slot}`
+      const given = logs.some((l) => l.medicationId === m.id && coversSlot(l, date, slot))
       if (given) continue
-      const overdueMin = (now.getTime() - new Date(due).getTime()) / 60000
+      const overdueMin = (now.getTime() - slotMs(date, slot)) / 60000
       if (overdueMin > 0 && overdueMin <= REMIND_WINDOW_MIN) out.push({ key: `r:${m.id}:${due}`, kind: 'routine', medicationId: m.id, generic: m.generic, due, slot, mgPerDose: slotDose(m, slot) ?? d?.mgPerDose, overdueMin })
     }
   }

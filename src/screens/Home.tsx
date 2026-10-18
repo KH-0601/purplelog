@@ -10,7 +10,7 @@ import { currentUserId } from '../lib/cloud'
 import { monthlyRows, ymOf } from '../lib/monthly'
 import { addDays, daysBetween, fmtDur, fmtMD, nowLocalISO, today } from '../lib/format'
 import { nextCheck, ruleFor } from '../lib/monitoring'
-import { CODES, EventTag, coversSlot, currentDose, dailyMg, defaultSchedule, eventLabel, isActiveMed, isScheduledMed, isUniformDose, nearestSlotDate, slotDose } from './shared'
+import { CODES, EventTag, PATTERN_COLORS, coversSlot, currentDose, dailyMg, defaultSchedule, dogPatterns, eventLabel, isActiveMed, isScheduledMed, isUniformDose, nearestSlotDate, slotDose } from './shared'
 
 const GENERIC_TO_ANALYTE: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV' }
 
@@ -36,6 +36,12 @@ export default function Home() {
   const delta = prev ? Math.round(((cur - prev) / prev) * 100) : null
 
   const seizures = events.filter((e) => e.kind === 'seizure')
+  // per-pattern breakdown when this dog uses several seizure patterns
+  const patterns = dogPatterns(dog)
+  const split = patterns.length > 1
+  const monthByPattern = split ? patterns.map((p) => ({ p, n: seizures.filter((e) => e.pattern === p && e.start.startsWith(ym)).reduce((a, e) => a + (e.count ?? 1), 0) })) : []
+  const monthUnclassified = split ? seizures.filter((e) => !e.pattern && e.start.startsWith(ym)).reduce((a, e) => a + (e.count ?? 1), 0) : 0
+  const sinceByPattern = split ? patterns.map((p) => { const last = [...seizures].reverse().find((e) => e.pattern === p); return { p, days: last ? daysBetween(last.start.slice(0, 10), now) : undefined } }) : []
   const lastSeizure = seizures.length ? seizures[seizures.length - 1] : undefined
   let sinceLast: number | undefined
   let monthlyOnly = false
@@ -118,6 +124,7 @@ export default function Home() {
               <small>{t('home.times')}</small>
             </div>
             <div className="l">{t('home.thisMonth')}</div>
+            {split && <div className="note kpi-split">{monthByPattern.map((x) => <span key={x.p} style={{ color: PATTERN_COLORS[x.p] }}>{x.p} {x.n}</span>)}{monthUnclassified > 0 && <span>{t('chart.unclassified')} {monthUnclassified}</span>}</div>}
             {delta != null && <div className={'delta' + (delta > 0 ? ' up' : '')}>{t('home.vsPrev')} {delta > 0 ? '+' : ''}{delta}%</div>}
           </div>
           <div>
@@ -129,6 +136,7 @@ export default function Home() {
               {t('home.sinceLast')}
               {monthlyOnly && <span className="note"> {t('home.monthlyOnly')}</span>}
             </div>
+            {split && <div className="note kpi-split">{sinceByPattern.map((x) => <span key={x.p} style={{ color: PATTERN_COLORS[x.p] }}>{x.p} {x.days ?? '—'}{t('home.days')}</span>)}</div>}
           </div>
         </div>
       </div>

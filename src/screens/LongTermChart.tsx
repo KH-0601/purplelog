@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
 import * as echarts from 'echarts'
 import { useTranslation } from 'react-i18next'
-import type { Event, Lab, Medication, MonthlySummary, ReferenceRange } from '../db'
+import type { Dog, Event, Lab, Medication, MonthlySummary, ReferenceRange } from '../db'
 import { monthlyRows } from '../lib/monthly'
 import { findRange, normalize } from '../lib/normalize'
 import { addDays, today } from '../lib/format'
-import { DRUG_ANALYTES, MONITOR_ANALYTES } from './shared'
+import { DRUG_ANALYTES, MONITOR_ANALYTES, PATTERN_COLORS, dogPatterns, type Pattern } from './shared'
 
 export type Period = 'm1' | 'm3' | 'm6' | 'y1' | 'all'
 
@@ -28,7 +28,9 @@ function useChart(option: echarts.EChartsOption) {
 const CODES: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV', imepitoin: 'IMP', gabapentin: 'GBP', supplement_trial_M010: 'SUP' }
 const COLORS: Record<string, string> = { PB: '#D64545', KBr: '#E0B31E', ZNS: '#7B5EA7', LEV: '#4D9E8A', T4: '#3B7DD8', FT4: '#7BAAE8', TSH: '#9AB8E8', ALT: '#9A8F6A', ALP: '#C4B48A' }
 
-export default function LongTermChart({ events, monthly, meds, labs, refs, period, compact }: { events: Event[]; monthly: MonthlySummary[]; meds: Medication[]; labs: Lab[]; refs: ReferenceRange[]; period: Period; compact?: boolean }) {
+export default function LongTermChart({ events, monthly, meds, labs, refs, period, compact, dog }: { events: Event[]; monthly: MonthlySummary[]; meds: Medication[]; labs: Lab[]; refs: ReferenceRange[]; period: Period; compact?: boolean; dog?: Dog }) {
+  const patterns = dogPatterns(dog)
+  const split = patterns.length > 1
   const { t } = useTranslation()
   const now = today()
   const daily = period === 'm1' || period === 'm3'
@@ -39,18 +41,31 @@ export default function LongTermChart({ events, monthly, meds, labs, refs, perio
   let seiz: number[]
   let unus: number[]
   let eps: { x: string; y: number; count: number; hours: number }[] = []
+  // per-pattern seizure counts per category (A/B/C + unclassified) when the dog uses several patterns
+  const countBy = (pred: (e: Event) => boolean, p?: Pattern | 'none') => events.filter((e) => e.kind === 'seizure' && pred(e) && (p === undefined || (p === 'none' ? !e.pattern : e.pattern === p))).reduce((a, e) => a + (e.count ?? 1), 0)
+  let byPattern: Record<string, number[]> = {}
   if (daily) {
     cats = []
     for (let d = fromDate!; d <= now; d = addDays(d, 1)) cats.push(d)
-    seiz = cats.map((d) => events.filter((e) => e.kind === 'seizure' && e.start.startsWith(d)).reduce((a, e) => a + (e.count ?? 1), 0))
+    seiz = cats.map((d) => countBy((e) => e.start.startsWith(d)))
     unus = cats.map((d) => events.filter((e) => e.kind === 'unusual' && e.start.startsWith(d)).length)
+    if (split) for (const p of [...patterns, 'none' as const]) byPattern[p] = cats.map((d) => countBy((e) => e.start.startsWith(d), p))
   } else {
     const rows = monthlyRows(monthly, events, fromDate?.slice(0, 7), now.slice(0, 7))
     cats = rows.map((r) => r.ym)
     seiz = rows.map((r) => r.seizures)
     unus = rows.map((r) => r.unusual)
     eps = rows.flatMap((r) => r.episodes.map((e, i) => ({ x: r.ym, y: r.seizures + i * 2.2, count: e.count, hours: e.hours })))
+    if (split) {
+      for (const p of patterns) byPattern[p] = rows.map((r) => countBy((e) => e.start.startsWith(r.ym), p))
+      // whatever the month total does not attribute to A/B/C (older spreadsheet months, records without a pattern)
+      byPattern['none'] = rows.map((r, i) => Math.max(0, r.seizures - patterns.reduce((a, p) => a + byPattern[p][i], 0)))
+    }
   }
+  const seizureSeries: echarts.SeriesOption[] = split
+    ? [...patterns.map((p) => ({ name: t('seizure.pattern' + p), type: 'bar' as const, stack: 'seiz', data: byPattern[p], itemStyle: { color: PATTERN_COLORS[p] }, barMaxWidth: 14, barCategoryGap: '25%', z: 2 })),
+       { name: t('chart.seizures'), type: 'bar' as const, stack: 'seiz', data: byPattern['none'], itemStyle: { color: '#C9C0E6' }, barMaxWidth: 14, z: 2 }]
+    : [{ name: t('chart.seizures'), type: 'bar' as const, data: seiz, itemStyle: { color: '#5B3FA8' }, barMaxWidth: 14, barCategoryGap: '25%', z: 2 }]
   // Monthly axis: January shows the year ("26/1"), other months just "3月". Which months get a label depends on
   // how many fit: ≤8 all, ≤18 odd months (so January is always visible), ≤36 quarterly, otherwise Jan/Jul.
   const axisLabel = (v: string) => (daily ? v.slice(5).replace('-', '/') : v.endsWith('-01') || cats.length <= 8 ? v.slice(2, 4) + '/' + String(Number(v.slice(5))) : String(Number(v.slice(5))) + '月')
@@ -68,7 +83,7 @@ export default function LongTermChart({ events, monthly, meds, labs, refs, perio
     xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 10, formatter: axisLabel, interval: showLabel, hideOverlap: true, margin: 8 }, axisTick: { show: false } },
     yAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 9 }, splitLine: { lineStyle: { color: '#EFEDF4' } } },
     series: [
-      { name: t('chart.seizures'), type: 'bar', data: seiz, itemStyle: { color: '#5B3FA8' }, barMaxWidth: 14, barCategoryGap: '25%', z: 2 },
+      ...seizureSeries,
       { name: t('chart.unusual'), type: 'bar', data: unus, itemStyle: { color: '#D9A441' }, barMaxWidth: 8, barGap: '-30%', z: 1 },
       {
         name: t('chart.episodes'),
@@ -127,7 +142,7 @@ export default function LongTermChart({ events, monthly, meds, labs, refs, perio
         <h4>{daily ? t('chart.seizures') + ' / ' + t('chart.unusual') : t('chart.seizures') + '・' + t('chart.unusual') + '・' + t('chart.episodes')}</h4>
         <div ref={r1} className="chart" style={h} />
         <div className="legend">
-          <span><i style={{ background: '#5B3FA8' }} />{t('chart.seizures')}</span>
+          {split ? (<>{patterns.map((p) => <span key={p}><i style={{ background: PATTERN_COLORS[p] }} />{t('seizure.pattern' + p)}{dog?.seizurePatterns?.[p] ? `（${dog.seizurePatterns[p]}）` : ''}</span>)}<span><i style={{ background: '#C9C0E6' }} />{t('chart.seizures')}（{t('chart.unclassified')}）</span></>) : <span><i style={{ background: '#5B3FA8' }} />{t('chart.seizures')}</span>}
           <span><i style={{ background: '#D9A441' }} />{t('chart.unusual')}</span>
           {!daily && <span><i style={{ background: '#8E77D6', borderRadius: '50%' }} />{t('chart.episodes')}</span>}
         </div>

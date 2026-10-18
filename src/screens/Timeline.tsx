@@ -21,6 +21,7 @@ export default function Timeline() {
   const [open, setOpen] = useState<string | null>(null)
   const [showMonthly, setShowMonthly] = useState(false)
   const [showDoses, setShowDoses] = useState(true)
+  const [showPrn, setShowPrn] = useState(true)
   const names = useNames([...events.map((e) => e.by), ...doseLogs.map((l) => l.by)])
   if (!dog) return null
 
@@ -39,6 +40,7 @@ export default function Timeline() {
   for (const l of doseLogs) {
     const prn = l.kind === 'prn' || l.slot === 'prn'
     if (!prn && !showDoses) continue
+    if (prn && !showPrn) continue
     items.push({ date: l.time, kind: prn ? 'prnLog' : 'doseLog', label: `${t('meds.generics.' + l.generic, l.generic)}${!prn && l.slot ? ` ${l.slot}` : ''} ${l.mgPerDose ? l.mgPerDose + ' mg' : ''}`, sub: l.note, by: l.by, logId: l.id })
   }
   for (const l of labs) items.push({ date: l.datetime, kind: 'lab', label: l.results.map((r) => `${r.analyte} ${r.valueText ?? r.value}`).join(' / '), id: l.id })
@@ -57,6 +59,7 @@ export default function Timeline() {
       </div>
       <div className="period">
         <button className={showDoses ? 'on' : ''} onClick={() => setShowDoses(!showDoses)}>{t('timeline.showDoses')}</button>
+        <button className={showPrn ? 'on' : ''} onClick={() => setShowPrn(!showPrn)}>{t('timeline.showPrn')}</button>
       </div>
       <div className="card">
         {items.map((it, i) => {

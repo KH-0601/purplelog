@@ -66,28 +66,39 @@ export const SEX_OPTIONS = ['male', 'male_neutered', 'female', 'female_spayed', 
 
 /** Reminders repeat only within this many minutes after the slot time; later the dose simply shows as unrecorded. */
 export const REMIND_WINDOW_MIN = 360
-/** "24:00" (and "7:30") → "00:00" / "07:30"; invalid strings are dropped. Sorted, unique. */
+/** "7:30" → "07:30"; "24:00" is kept: it means the end of the day (a 23:50 dose belongs to that day, not the next). */
 export function normaliseTimes(list: string[]): string[] {
   const out = new Set<string>()
   for (const raw of list) {
     const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim())
     if (!m) continue
-    const h = Number(m[1]) % 24, mi = Number(m[2])
-    if (mi > 59) continue
+    const h = Number(m[1]), mi = Number(m[2])
+    if (h > 24 || mi > 59 || (h === 24 && mi > 0)) continue
     out.add(`${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`)
   }
   return [...out].sort()
 }
+/** Epoch ms of `slot` on local date `date` ("24:00" = midnight at the end of that day). */
+export function slotMs(date: string, slot: string): number {
+  const [h, mi] = slot.split(':').map(Number)
+  return new Date(date + 'T00:00').getTime() + (h * 60 + mi) * 60000
+}
+/** Local YYYY-MM-DD shifted by n days. */
+export function shiftDate(date: string, n: number): string {
+  const d = new Date(date + 'T00:00')
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+/** The slot-day whose occurrence of `slot` is the most recent one that can be overdue today: for "24:xx" that is yesterday. */
+export const dueDateFor = (slot: string, today: string) => (slot.startsWith('24:') ? shiftDate(today, -1) : today)
 export const parseTimesInput = (v: string) => normaliseTimes(v.split(/[,、\s]+/))
 /** The date of the slot occurrence nearest to `atLocalIso` (yesterday / today / tomorrow). */
 export function nearestSlotDate(slot: string, atLocalIso: string): string {
   const at = new Date(atLocalIso.slice(0, 16)).getTime()
   const day = atLocalIso.slice(0, 10)
   const cands = [-1, 0, 1].map((off) => {
-    const d = new Date(day + 'T00:00')
-    d.setDate(d.getDate() + off)
-    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    return { ds, diff: Math.abs(new Date(`${ds}T${slot}`).getTime() - at) }
+    const ds = shiftDate(day, off)
+    return { ds, diff: Math.abs(slotMs(ds, slot) - at) }
   })
   return cands.sort((a, b) => a.diff - b.diff)[0].ds
 }

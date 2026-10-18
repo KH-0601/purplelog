@@ -25,6 +25,7 @@ a{color:var(--accent-ink);text-decoration:none}
 .meddose{text-align:right;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:14px;white-space:nowrap}
 .medactions{display:flex;gap:8px;margin-top:8px}
 .medcard .field{border-top:0;padding-top:6px}
+.kpi-split{display:flex;gap:8px;flex-wrap:wrap;font-weight:700;margin-top:2px}
 .dogbar{display:flex;gap:6px;align-items:stretch;padding:0 14px 8px;position:sticky;top:44px;background:var(--bg);z-index:5}
 .dogtab{flex:1;min-height:44px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);font-size:16px;font-weight:700;color:var(--muted);padding:6px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dogtab.on{background:var(--accent);border-color:var(--accent);color:#fff}

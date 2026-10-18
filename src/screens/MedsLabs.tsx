@@ -57,7 +57,7 @@ export default function MedsLabs() {
   const builtTimes = (firstTime: string, n: number, everyH: number) => {
     const [h, mi] = firstTime.split(':').map(Number)
     if (!Number.isFinite(h) || !Number.isFinite(mi)) return defaultSchedule(n || 2)
-    return Array.from({ length: Math.max(1, Math.min(n || 1, 6)) }, (_, k) => { const m = (h * 60 + mi + k * (everyH || 24) * 60) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` }).sort()
+    return Array.from({ length: Math.max(1, Math.min(n || 1, 6)) }, (_, k) => { const raw = h * 60 + mi + k * (everyH || 24) * 60; const m = raw % 1440; if (m === 0 && k > 0) return '24:00'; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` }).sort()
   }
   const newTimes = builtTimes(newMed.firstTime, Number(newMed.timesPerDay), Number(newMed.everyH))
   const [addingLab, setAddingLab] = useState(false)

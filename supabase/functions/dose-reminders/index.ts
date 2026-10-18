@@ -38,6 +38,11 @@ function localIso(d: Date, tz: string) {
   const g = (t: string) => p.find((x) => x.type === t)?.value ?? '00'
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour') === '24' ? '00' : g('hour')}:${g('minute')}`
 }
+/** Local wall-clock string → ms on a UTC-based scale (consistent within one tz). */
+const localMs = (iso: string) => new Date(iso.slice(0, 16) + ':00Z').getTime()
+/** ms of `slot` on local `date`; "24:00" = end of that day. */
+const slotLocalMs = (date: string, slot: string) => { const [h, mi] = slot.split(':').map(Number); return new Date(date + 'T00:00:00Z').getTime() + (h * 60 + mi) * 60000 }
+const shiftDate = (date: string, n: number) => new Date(new Date(date + 'T00:00:00Z').getTime() + n * 86400000).toISOString().slice(0, 10)
 /** Minutes between two local wall-clock strings (same tz). */
 const minutesBetween = (a: string, b: string) => (new Date(b + ':00Z').getTime() - new Date(a + ':00Z').getTime()) / 60000
 
@@ -84,10 +89,12 @@ Deno.serve(async (req) => {
       const last = [...(m.doses ?? [])].sort((a, b) => a.date.localeCompare(b.date)).pop()
       const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(last?.timesPerDay ?? 2)
       for (const slot of slots) {
-        const dueAt = `${today}T${slot}`
-        const mins = minutesBetween(dueAt, nowLocal)
+        // "24:xx" is the end of the day: the occurrence that can be overdue now belongs to yesterday
+        const date = slot.startsWith('24:') ? shiftDate(today, -1) : today
+        const dueAt = `${date}T${slot}`
+        const mins = (localMs(nowLocal) - slotLocalMs(date, slot)) / 60000
         if (mins <= 0 || mins > REMIND_WINDOW_MIN) continue
-        const given = logs.some((l) => l.medicationId === m.id && (l.slot ? l.slot === slot && (l.slotDate ?? l.time.slice(0, 10)) === today : l.time.startsWith(today) && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3))
+        const given = logs.some((l) => l.medicationId === m.id && (l.slot ? l.slot === slot && (l.slotDate ?? l.time.slice(0, 10)) === date : l.time.startsWith(date) && Math.abs(Number(l.time.slice(11, 13)) - Number(slot.slice(0, 2))) <= 3))
         if (!given) due.push({ key: `r:${m.id}:${dueAt}`, dogId: dog.id, text: `${dog.name}: ${NAMES[m.generic] ?? m.generic} ${slot}${(m.slotDoses?.[slot] ?? last?.mgPerDose) != null ? ` ${m.slotDoses?.[slot] ?? last?.mgPerDose}mg` : ''}`, minutes: mins })
       }
     }
