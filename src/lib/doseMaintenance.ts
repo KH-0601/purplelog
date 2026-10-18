@@ -1,5 +1,5 @@
 import { db } from '../db'
-import { nearestSlotDate, normaliseTimes } from '../screens/shared'
+import { nearestSlotDate, normaliseTimes, shiftDate } from '../screens/shared'
 
 let done = false
 /** Once per launch: give legacy scheduled dose records a slot date, then drop duplicates
@@ -8,14 +8,24 @@ export async function tidyDoseLogs() {
   if (done) return
   done = true
   // medication schedule times: zero-padded, duplicates removed ("24:00" stays: end of day)
+  const endOfDayMeds = new Set<string>()
   for (const m of await db.medications.toArray()) {
     if (m.scheduleTimes?.length) {
-      const n = normaliseTimes(m.scheduleTimes)
+      let n = normaliseTimes(m.scheduleTimes)
+      // an older version turned "24:00" into "00:00"; the per-slot amounts still say "24:00" → restore the end-of-day slot
+      if (m.slotDoses && '24:00' in m.slotDoses && n.includes('00:00') && !n.includes('24:00')) n = normaliseTimes(n.map((x) => (x === '00:00' ? '24:00' : x)))
       if (n.join() !== m.scheduleTimes.join()) await db.medications.update(m.id, { scheduleTimes: n })
+      if (n.includes('24:00')) endOfDayMeds.add(m.id)
     }
   }
   const logs = await db.doseLogs.toArray()
   for (const l of logs) {
+    // records of an end-of-day medication that were stored as "00:00" belong to the previous day's "24:00"
+    if (l.slot === '00:00' && endOfDayMeds.has(l.medicationId)) {
+      l.slot = '24:00'
+      l.slotDate = shiftDate(l.slotDate ?? l.time.slice(0, 10), -1)
+      await db.doseLogs.update(l.id, { slot: l.slot, slotDate: l.slotDate })
+    }
     if (l.slot && l.slot !== 'prn' && !l.slotDate) {
       l.slotDate = nearestSlotDate(l.slot, l.time)
       await db.doseLogs.update(l.id, { slotDate: l.slotDate })
