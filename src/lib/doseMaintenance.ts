@@ -13,8 +13,12 @@ export async function tidyDoseLogs() {
     if (m.scheduleTimes?.length) {
       let n = normaliseTimes(m.scheduleTimes)
       // an older version turned "24:00" into "00:00"; the per-slot amounts still say "24:00" → restore the end-of-day slot
-      if (m.slotDoses && '24:00' in m.slotDoses && n.includes('00:00') && !n.includes('24:00')) n = normaliseTimes(n.map((x) => (x === '00:00' ? '24:00' : x)))
-      if (n.join() !== m.scheduleTimes.join()) await db.medications.update(m.id, { scheduleTimes: n })
+      const eod = m.endOfDay || (m.slotDoses && '24:00' in m.slotDoses)
+      if (eod && n.includes('00:00') && !n.includes('24:00')) n = normaliseTimes(n.map((x) => (x === '00:00' ? '24:00' : x)))
+      const patch: Partial<typeof m> = {}
+      if (n.join() !== m.scheduleTimes.join()) patch.scheduleTimes = n
+      if (n.includes('24:00') && !m.endOfDay) patch.endOfDay = true
+      if (Object.keys(patch).length) await db.medications.update(m.id, patch)
       if (n.includes('24:00')) endOfDayMeds.add(m.id)
     }
   }

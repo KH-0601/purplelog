@@ -118,6 +118,8 @@ export interface Medication {
   scheduleTimes?: string[]
   /** Per-slot amounts (mg) when the dose differs by time of day, keyed by slot time ("00:00"). Absent = same amount every slot. */
   slotDoses?: Record<string, number>
+  /** Marker: this medication has an end-of-day ("24:00") slot. Lets the app restore it if an older version rewrote it as "00:00". */
+  endOfDay?: boolean
   /** Rescue/trial drugs: true = given every day at scheduleTimes (shown on Home, reminders). Maintenance is always scheduled. */
   scheduled?: boolean
   misses?: string[]

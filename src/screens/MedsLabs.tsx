@@ -93,7 +93,7 @@ export default function MedsLabs() {
     for (const p of open) await db.dosePlans.update(p.id, { cancelled: true })
   }
   async function saveMed() {
-    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose || newMed.perSlot ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose) || (newMed.perSlot ? Number(newMed.slotMg[newTimes[0]]) || undefined : undefined), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: newTimes, slotDoses: newMed.perSlot ? Object.fromEntries(newTimes.map((s) => [s, Number(newMed.slotMg[s]) || 0])) : undefined, scheduled: newMed.kind === 'maintenance' ? undefined : newMed.scheduled, updatedAt: today() })
+    await db.medications.add({ id: uid(), dogId: dog!.id, generic: newMed.generic, kind: newMed.kind as Medication['kind'], startDate: newMed.startDate, doses: newMed.mgPerDose || newMed.perSlot ? [{ date: newMed.startDate, mgPerDose: Number(newMed.mgPerDose) || (newMed.perSlot ? Number(newMed.slotMg[newTimes[0]]) || undefined : undefined), timesPerDay: Number(newMed.timesPerDay) || 2, weightKg: kg }] : [], scheduleTimes: newTimes, endOfDay: newTimes.includes('24:00') || undefined, slotDoses: newMed.perSlot ? Object.fromEntries(newTimes.map((s) => [s, Number(newMed.slotMg[s]) || 0])) : undefined, scheduled: newMed.kind === 'maintenance' ? undefined : newMed.scheduled, updatedAt: today() })
     setAddingMed(false)
   }
   async function saveLab() {
@@ -209,7 +209,7 @@ export default function MedsLabs() {
               )}
               {isScheduledMed(m) && !m.endDate && (
                 <div className="field"><span className="k">{t('meds.schedule')}</span>
-                  <input defaultValue={(m.scheduleTimes ?? defaultSchedule(d?.timesPerDay ?? 2)).join(', ')} onBlur={(e) => db.medications.update(m.id, { scheduleTimes: parseTimesInput(e.target.value).length ? parseTimesInput(e.target.value) : m.scheduleTimes })} />
+                  <input defaultValue={(m.scheduleTimes ?? defaultSchedule(d?.timesPerDay ?? 2)).join(', ')} onBlur={(e) => { const n = parseTimesInput(e.target.value); db.medications.update(m.id, { scheduleTimes: n.length ? n : m.scheduleTimes, endOfDay: (n.length ? n : m.scheduleTimes ?? []).includes('24:00') || undefined }) }} />
                 </div>
               )}
               {isScheduledMed(m) && !m.endDate && (
