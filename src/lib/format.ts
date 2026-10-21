@@ -17,7 +17,11 @@ export const fmtDur = (sec?: number, text?: string) => {
   const s = sec % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
-export const today = () => new Date().toISOString().slice(0, 10)
+/** Local calendar date (YYYY-MM-DD). Not toISOString(): that is UTC and lags 9 h in Japan. */
+export const today = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 export const daysBetween = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000)
 export const addDays = (iso: string, n: number) => {
   const d = new Date(iso)

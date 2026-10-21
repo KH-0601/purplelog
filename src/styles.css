@@ -29,6 +29,8 @@ a{color:var(--accent-ink);text-decoration:none}
 .dose-pair{display:inline-flex;align-items:stretch;gap:2px}
 .dose-skip{border:1px solid var(--rule);background:transparent;color:var(--muted);border-radius:8px;width:30px;font-size:16px;padding:0}
 .dose-btn.skipped{background:#F1EFF5;color:var(--muted);border-style:dashed}
+.dose-btn.prev{border-style:dashed}
+.prevtag{display:block;font-size:10px;color:var(--warn);font-weight:700;line-height:1}
 .dogbar{display:flex;gap:6px;align-items:stretch;padding:0 14px 8px;position:sticky;top:44px;background:var(--bg);z-index:5}
 .dogtab{flex:1;min-height:44px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);font-size:16px;font-weight:700;color:var(--muted);padding:6px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dogtab.on{background:var(--accent);border-color:var(--accent);color:#fff}

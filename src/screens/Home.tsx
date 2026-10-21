@@ -10,7 +10,7 @@ import { currentUserId } from '../lib/cloud'
 import { monthlyRows, ymOf } from '../lib/monthly'
 import { addDays, daysBetween, fmtDur, fmtMD, nowLocalISO, today } from '../lib/format'
 import { nextCheck, ruleFor } from '../lib/monitoring'
-import { CODES, EventTag, PATTERN_COLORS, coversSlot, currentDose, dailyMg, defaultSchedule, dogPatterns, eventLabel, isActiveMed, isScheduledMed, isUniformDose, nearestSlotDate, slotDose } from './shared'
+import { CODES, EventTag, PATTERN_COLORS, coversSlot, currentDose, dailyMg, defaultSchedule, dogPatterns, eventLabel, isActiveMed, isScheduledMed, isUniformDose, slotDose, targetSlotDate } from './shared'
 
 const GENERIC_TO_ANALYTE: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV' }
 
@@ -58,17 +58,15 @@ export default function Home() {
   const kg = latestWeight(dog.weights)
   const activeMeds = meds.filter((m) => isScheduledMed(m) && isActiveMed(m, now))
   /** Mark today's slot as deliberately not given (schedule changed, vet instruction). Counts as handled, not as a dose. */
-  async function skipDose(m: Medication, slot: string) {
+  async function skipDose(m: Medication, slot: string, slotDate: string) {
     const t = nowLocalISO()
-    const slotDate = nearestSlotDate(slot, t)
     const dup = await db.doseLogs.where('dogId').equals(dog!.id).filter((l) => l.medicationId === m.id && coversSlot(l, slotDate, slot)).first()
     if (dup) return
     await db.doseLogs.add({ id: uid(), dogId: dog!.id, medicationId: m.id, generic: m.generic, time: t, slot, slotDate, kind: 'skipped', by: currentUserId() ?? undefined })
   }
-  async function giveDose(m: Medication, slot: string) {
+  async function giveDose(m: Medication, slot: string, slotDate: string) {
     const d = currentDose(m)
     const t = nowLocalISO()
-    const slotDate = nearestSlotDate(slot, t)
     // idempotent: a second tap (or a tap before sync caught up) must not create a duplicate record
     const dup = await db.doseLogs.where('dogId').equals(dog!.id).filter((l) => l.medicationId === m.id && coversSlot(l, slotDate, slot)).first()
     if (dup) return
@@ -171,7 +169,10 @@ export default function Home() {
               </div>
               <div className="dose-slots">
                 {slots.map((slot) => {
-                  const log = doseLogs.find((l) => l.medicationId === m.id && coversSlot(l, now, slot))
+                  const handled = (date: string) => doseLogs.some((l) => l.medicationId === m.id && coversSlot(l, date, slot))
+                  const sd = targetSlotDate(slot, nowLocalISO(), handled, m.startDate)
+                  const prev = sd !== now
+                  const log = doseLogs.find((l) => l.medicationId === m.id && coversSlot(l, sd, slot))
                   return log ? (
                     log.kind === 'skipped' ? (
                       <button key={slot} className="dose-btn skipped" onClick={() => undoDose(log)} title={t('dose.undo')}>
@@ -184,10 +185,10 @@ export default function Home() {
                     )
                   ) : (
                     <span key={slot} className="dose-pair">
-                      <button className="dose-btn" onClick={() => giveDose(m, slot)}>
-                        {slot}{!uniform && slotDose(m, slot) != null ? <small> {slotDose(m, slot)}mg</small> : null} {t('dose.give')}
+                      <button className={'dose-btn' + (prev ? ' prev' : '')} onClick={() => giveDose(m, slot, sd)}>
+                        {prev && <small className="prevtag">{t('dose.prevDay')}</small>}{slot}{!uniform && slotDose(m, slot) != null ? <small> {slotDose(m, slot)}mg</small> : null} {t('dose.give')}
                       </button>
-                      <button className="dose-skip" title={t('dose.skipTitle')} aria-label={t('dose.skipTitle')} onClick={() => confirm(t('dose.skipConfirm', { slot })) && skipDose(m, slot)}>×</button>
+                      <button className="dose-skip" title={t('dose.skipTitle')} aria-label={t('dose.skipTitle')} onClick={() => confirm(t('dose.skipConfirm', { slot: (prev ? t('dose.prevDay') + ' ' : '') + slot })) && skipDose(m, slot, sd)}>×</button>
                     </span>
                   )
                 })}

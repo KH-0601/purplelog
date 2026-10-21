@@ -102,6 +102,15 @@ export function nearestSlotDate(slot: string, atLocalIso: string): string {
   })
   return cands.sort((a, b) => a.diff - b.diff)[0].ds
 }
+/** Date of the slot occurrence a Home button stands for: today's, unless today's is still more than 6 h away
+ *  and yesterday's occurrence is still open (e.g. 05:59 for last night's 23:30, 00:04 for last night's 24:00). Never tomorrow. */
+export function targetSlotDate(slot: string, nowIso: string, isHandled: (date: string) => boolean, startDate?: string): string {
+  const day = nowIso.slice(0, 10)
+  const yest = shiftDate(day, -1)
+  const aheadMin = (slotMs(day, slot) - new Date(nowIso.slice(0, 16)).getTime()) / 60000
+  if (aheadMin > 360 && !isHandled(yest) && (!startDate || startDate <= yest)) return yest
+  return day
+}
 /** Which day's slot a stored dose log covers (older logs fall back to the time's date). */
 export const logSlotDate = (l: { slotDate?: string; time: string }) => l.slotDate ?? l.time.slice(0, 10)
 /** Does this log cover `slot` on `date`? (legacy logs without a slot: same date, within 3 h) */
