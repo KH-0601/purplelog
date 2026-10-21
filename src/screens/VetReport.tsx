@@ -46,7 +46,7 @@ export default function VetReport() {
   // adherence: doses recorded vs planned slots, over the last 30 days
   const adhFrom = addDays(now, -29)
   const planned = meds.filter((m) => isScheduledMed(m) && isActiveMed(m, now)).reduce((a, m) => a + (m.scheduleTimes?.length ?? defaultSchedule(currentDose(m)?.timesPerDay ?? 2).length) * 30, 0)
-  const given = doseLogs.filter((l) => l.time >= adhFrom && l.kind !== 'prn' && l.slot !== 'prn').length
+  const given = doseLogs.filter((l) => l.time >= adhFrom && l.kind !== 'prn' && l.kind !== 'skipped' && l.slot !== 'prn').length
   const prnLogs = doseLogs.filter((l) => (l.kind === 'prn' || l.slot === 'prn') && (!from || l.time >= from))
 
   return (

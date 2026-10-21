@@ -57,6 +57,14 @@ export default function Home() {
   // ---- today's doses
   const kg = latestWeight(dog.weights)
   const activeMeds = meds.filter((m) => isScheduledMed(m) && isActiveMed(m, now))
+  /** Mark today's slot as deliberately not given (schedule changed, vet instruction). Counts as handled, not as a dose. */
+  async function skipDose(m: Medication, slot: string) {
+    const t = nowLocalISO()
+    const slotDate = nearestSlotDate(slot, t)
+    const dup = await db.doseLogs.where('dogId').equals(dog!.id).filter((l) => l.medicationId === m.id && coversSlot(l, slotDate, slot)).first()
+    if (dup) return
+    await db.doseLogs.add({ id: uid(), dogId: dog!.id, medicationId: m.id, generic: m.generic, time: t, slot, slotDate, kind: 'skipped', by: currentUserId() ?? undefined })
+  }
   async function giveDose(m: Medication, slot: string) {
     const d = currentDose(m)
     const t = nowLocalISO()
@@ -165,13 +173,22 @@ export default function Home() {
                 {slots.map((slot) => {
                   const log = doseLogs.find((l) => l.medicationId === m.id && coversSlot(l, now, slot))
                   return log ? (
+                    log.kind === 'skipped' ? (
+                      <button key={slot} className="dose-btn skipped" onClick={() => undoDose(log)} title={t('dose.undo')}>
+                        — {slot} <small>{t('dose.skipped')}</small>
+                      </button>
+                    ) : (
                     <button key={slot} className="dose-btn done" onClick={() => undoDose(log)} title={t('dose.undo')}>
                       ✓ {slot}{!uniform && slotDose(m, slot) != null ? <small>{slotDose(m, slot)}mg</small> : null} <small>{log.time.slice(11, 16)}</small>
                     </button>
+                    )
                   ) : (
-                    <button key={slot} className="dose-btn" onClick={() => giveDose(m, slot)}>
-                      {slot}{!uniform && slotDose(m, slot) != null ? <small> {slotDose(m, slot)}mg</small> : null} {t('dose.give')}
-                    </button>
+                    <span key={slot} className="dose-pair">
+                      <button className="dose-btn" onClick={() => giveDose(m, slot)}>
+                        {slot}{!uniform && slotDose(m, slot) != null ? <small> {slotDose(m, slot)}mg</small> : null} {t('dose.give')}
+                      </button>
+                      <button className="dose-skip" title={t('dose.skipTitle')} aria-label={t('dose.skipTitle')} onClick={() => confirm(t('dose.skipConfirm', { slot })) && skipDose(m, slot)}>×</button>
+                    </span>
                   )
                 })}
               </div>

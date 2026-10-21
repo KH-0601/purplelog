@@ -137,7 +137,8 @@ export interface DoseLog {
   /** For scheduled doses: the date of the slot this dose covers (a 23:30 dose given at 05:59 belongs to the previous day). */
   slotDate?: string
   /** scheduled (routine) or prn (as-needed / rescue). */
-  kind?: 'scheduled' | 'prn'
+  /** scheduled (routine), prn (as-needed / rescue), or skipped (slot deliberately not given, e.g. schedule changed mid-day). */
+  kind?: 'scheduled' | 'prn' | 'skipped'
   mgPerDose?: number
   note?: string
   by?: string

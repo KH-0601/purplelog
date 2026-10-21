@@ -48,7 +48,7 @@ export default function Timeline() {
     const prn = l.kind === 'prn' || l.slot === 'prn'
     if (!prn && !showDoses) continue
     if (prn && !showPrn) continue
-    items.push({ date: l.time, kind: prn ? 'prnLog' : 'doseLog', label: `${t('meds.generics.' + l.generic, l.generic)}${!prn && l.slot ? ` ${l.slot}` : ''} ${l.mgPerDose ? l.mgPerDose + ' mg' : ''}`, sub: l.note, by: l.by, logId: l.id })
+    items.push({ date: l.time, kind: prn ? 'prnLog' : 'doseLog', label: `${t('meds.generics.' + l.generic, l.generic)}${!prn && l.slot ? ` ${l.slot}` : ''} ${l.kind === 'skipped' ? t('dose.skipped') : l.mgPerDose ? l.mgPerDose + ' mg' : ''}`, sub: l.note, by: l.by, logId: l.id })
   }
   for (const l of labs) items.push({ date: l.datetime, kind: 'lab', label: l.results.map((r) => `${r.analyte} ${r.valueText ?? r.value}`).join(' / '), id: l.id })
   for (const w of dog.weights) items.push({ date: w.date, kind: 'weight', label: `${w.kg} kg` })

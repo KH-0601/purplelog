@@ -26,6 +26,9 @@ a{color:var(--accent-ink);text-decoration:none}
 .medactions{display:flex;gap:8px;margin-top:8px}
 .medcard .field{border-top:0;padding-top:6px}
 .kpi-split{display:flex;gap:8px;flex-wrap:wrap;font-weight:700;margin-top:2px}
+.dose-pair{display:inline-flex;align-items:stretch;gap:2px}
+.dose-skip{border:1px solid var(--rule);background:transparent;color:var(--muted);border-radius:8px;width:30px;font-size:16px;padding:0}
+.dose-btn.skipped{background:#F1EFF5;color:var(--muted);border-style:dashed}
 .dogbar{display:flex;gap:6px;align-items:stretch;padding:0 14px 8px;position:sticky;top:44px;background:var(--bg);z-index:5}
 .dogtab{flex:1;min-height:44px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);font-size:16px;font-weight:700;color:var(--muted);padding:6px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dogtab.on{background:var(--accent);border-color:var(--accent);color:#fff}
