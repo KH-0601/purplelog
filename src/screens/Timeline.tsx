@@ -45,10 +45,12 @@ export default function Timeline() {
   for (const e of events.filter((x) => x.kind !== 'seizure')) items.push({ date: e.start, kind: e.kind, label: eventLabel(e, t), sub: e.note, id: e.id, by: e.by })
   for (const m of meds) for (const d of m.doses) items.push({ date: d.date, kind: 'dose', label: `${t('meds.generics.' + m.generic, m.generic)} ${d.mgPerDose ? d.mgPerDose + ' mg' : ''} ×${d.timesPerDay}${d.reason ? ' ' + d.reason : ''}` })
   for (const l of doseLogs) {
+    // 'not given' slot markers only silence reminders; they are not doses and are not listed
+    if (l.kind === 'skipped') continue
     const prn = l.kind === 'prn' || l.slot === 'prn'
     if (!prn && !showDoses) continue
     if (prn && !showPrn) continue
-    items.push({ date: l.time, kind: prn ? 'prnLog' : 'doseLog', label: `${t('meds.generics.' + l.generic, l.generic)}${!prn && l.slot ? ` ${l.slot}` : ''} ${l.kind === 'skipped' ? t('dose.skipped') : l.mgPerDose ? l.mgPerDose + ' mg' : ''}`, sub: l.note, by: l.by, logId: l.id })
+    items.push({ date: l.time, kind: prn ? 'prnLog' : 'doseLog', label: `${t('meds.generics.' + l.generic, l.generic)}${!prn && l.slot ? ` ${l.slot}` : ''} ${l.mgPerDose ? l.mgPerDose + ' mg' : ''}`, sub: l.note, by: l.by, logId: l.id })
   }
   for (const l of labs) items.push({ date: l.datetime, kind: 'lab', label: l.results.map((r) => `${r.analyte} ${r.valueText ?? r.value}`).join(' / '), id: l.id })
   for (const w of dog.weights) items.push({ date: w.date, kind: 'weight', label: `${w.kg} kg` })
