@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid, type DoseLog } from '../db'
@@ -15,13 +15,28 @@ export default function DoseAlerts() {
   const { t } = useTranslation()
   const s = useSettings()
   const dogs = useDogs()
-  const meds = useLiveQuery(() => db.medications.toArray(), []) ?? NONE
-  const plans = useLiveQuery(() => db.dosePlans.toArray(), []) ?? NONE
+  const medsQ = useLiveQuery(() => db.medications.toArray(), [])
+  const plansQ = useLiveQuery(() => db.dosePlans.toArray(), [])
   const since = toLocalISO(new Date(Date.now() - 36 * 3600 * 1000)).slice(0, 10)
-  const logs = useLiveQuery(() => db.doseLogs.where('time').aboveOrEqual(since).toArray(), [since]) ?? NONE
+  const logsQ = useLiveQuery(() => db.doseLogs.where('time').aboveOrEqual(since).toArray(), [since])
+  // judge nothing until every table has actually loaded (an empty "loading" list looked like "no dose recorded")
+  const ready = medsQ !== undefined && plansQ !== undefined && logsQ !== undefined
+  const meds = medsQ ?? NONE
+  const plans = plansQ ?? NONE
+  const logs = logsQ ?? NONE
   const [shown, setShown] = useState<DueItem[]>([])
-  const latest = useRef({ dogs, meds, plans, logs })
-  latest.current = { dogs, meds, plans, logs }
+  const latest = useRef({ dogs, meds, plans, logs, ready })
+  latest.current = { dogs, meds, plans, logs, ready }
+  const dueNow = (now: Date) => {
+    const { dogs, meds, plans, logs } = latest.current
+    const due: DueItem[] = []
+    for (const d of dogs) {
+      for (const it of computeDue(meds.filter((m) => m.dogId === d.id), plans.filter((p) => p.dogId === d.id), logs.filter((l) => l.dogId === d.id), now)) due.push({ ...it, dogId: d.id, dogName: d.name })
+    }
+    return due
+  }
+  // what is still due right now: a dose recorded anywhere (Home, other phone) disappears from the banner at once
+  const stillDue = useMemo(() => new Set(ready ? dueNow(new Date()).map((d) => d.key) : []), [ready, dogs, meds, plans, logs])
   const enabled = s.alertsEnabled !== false
   const interval = s.alertIntervalMin ?? 30
   const colors = dogColorMap(dogs)
@@ -29,12 +44,8 @@ export default function DoseAlerts() {
   useEffect(() => {
     if (!enabled) return
     const tick = () => {
-      const { dogs, meds, plans, logs } = latest.current
-      const now = new Date()
-      const due: DueItem[] = []
-      for (const d of dogs) {
-        for (const it of computeDue(meds.filter((m) => m.dogId === d.id), plans.filter((p) => p.dogId === d.id), logs.filter((l) => l.dogId === d.id), now)) due.push({ ...it, dogId: d.id, dogName: d.name })
-      }
+      if (!latest.current.ready) return
+      const due = dueNow(new Date())
       const fresh = pickToAlert(due, interval)
       if (fresh.length) {
         setShown(due)
@@ -52,9 +63,10 @@ export default function DoseAlerts() {
       document.removeEventListener('visibilitychange', onVis)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, interval, s.alertSound])
+  }, [enabled, interval, s.alertSound, ready])
 
-  if (!shown.length) return null
+  const visible = shown.filter((it) => stillDue.has(it.key))
+  if (!visible.length) return null
 
   async function give(it: DueItem) {
     const log: DoseLog = { id: uid(), dogId: it.dogId!, medicationId: it.medicationId, generic: it.generic, time: toLocalISO(new Date()), slot: it.kind === 'routine' ? it.slot : 'prn', slotDate: it.kind === 'routine' ? it.due.slice(0, 10) : undefined, kind: it.kind === 'routine' ? 'scheduled' : 'prn', mgPerDose: it.mgPerDose, by: currentUserId() ?? undefined }
@@ -63,11 +75,11 @@ export default function DoseAlerts() {
     setShown((x) => x.filter((y) => y.key !== it.key))
   }
   function later() {
-    snooze(shown)
+    snooze(visible)
     setShown([])
   }
 
-  const byDog = dogs.filter((d) => shown.some((it) => it.dogId === d.id))
+  const byDog = dogs.filter((d) => visible.some((it) => it.dogId === d.id))
 
   return (
     <div className="alert-overlay" role="alertdialog">
@@ -77,7 +89,7 @@ export default function DoseAlerts() {
         {byDog.map((d) => (
           <div className="alert-dog" key={d.id} style={{ borderColor: colors[d.id] }}>
             <div className="alert-dogname" style={{ background: colors[d.id] }}>{d.name}</div>
-            {shown.filter((it) => it.dogId === d.id).map((it) => (
+            {visible.filter((it) => it.dogId === d.id).map((it) => (
               <div className="row" key={it.key}>
                 <span className="grow">
                   <b>{t('meds.generics.' + it.generic, it.generic)}</b>
