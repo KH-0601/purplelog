@@ -101,11 +101,28 @@ async function drain() {
       const code = (e as { code?: string })?.code
       const msg = String((e as Error)?.message ?? e)
       if (code === 'invalid_argument' || /row-level security|permission/i.test(msg)) setState({ status: 'readonly', canWrite: false, lastError: msg })
-      else setState({ lastError: msg })
+      else {
+        // network / expired session etc.: keep the job and try again shortly (a lost dose record keeps reminders firing)
+        setState({ lastError: msg })
+        retryLater.push(job)
+        scheduleRetry()
+      }
     }
     setState({ pending: queue.length })
   }
   draining = false
+}
+const retryLater: (() => Promise<void>)[] = []
+let retryTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleRetry(ms = 20000) {
+  if (retryTimer) return
+  retryTimer = setTimeout(() => {
+    retryTimer = null
+    if (!retryLater.length) return
+    queue.push(...retryLater.splice(0))
+    setState({ pending: queue.length })
+    void drain()
+  }, ms)
 }
 function enqueue(job: () => Promise<void>) {
   queue.push(job)
@@ -205,6 +222,38 @@ async function startArtifact(claude: { use(n: string): Promise<unknown> }) {
   return true
 }
 
+// ---- reconcile ------------------------------------------------------------
+/** Push every local record the server has never seen (saved offline, before sign-in finished, or after a failed send).
+ *  Records the server knows (including ones deleted there) are left alone: the server copy wins for those. */
+async function uploadMissing(rows: { tbl: string; id: string }[]) {
+  const known = new Set(rows.map((r) => r.tbl + '|' + r.id))
+  for (const t of SHARED_TABLES) {
+    const table = db.table(t)
+    const keys = await table.toCollection().primaryKeys()
+    const objs = await table.toArray()
+    keys.forEach((k, i) => {
+      const id = docIdOf(t, k)
+      if (!known.has(t + '|' + id)) pushSet(t, k, objs[i] as Record<string, unknown>)
+    })
+  }
+}
+let resyncing = false
+/** Re-fetch and re-upload when the app comes back to the foreground or the network returns. */
+export async function resync() {
+  if (resyncing || state.backend !== 'supabase' || state.status === 'login') return
+  resyncing = true
+  try {
+    const rows = await fetchAllDocs()
+    await applyRows(rows)
+    await uploadMissing(rows)
+    if (state.status === 'error') setState({ status: 'ready', lastError: undefined })
+  } catch {
+    /* offline: next time */
+  } finally {
+    resyncing = false
+  }
+}
+
 // ---- supabase backend -----------------------------------------------------
 let unsubscribe: (() => void) | null = null
 export async function startSupabase(): Promise<void> {
@@ -222,6 +271,7 @@ export async function startSupabase(): Promise<void> {
   try {
     const rows = await fetchAllDocs()
     await applyRows(rows)
+    await uploadMissing(rows)
     unsubscribe?.()
     unsubscribe = subscribeDocs((row: DocRow) => void applyRows([row]))
     setState({ status: 'ready', canWrite: true, isOwner: true })
@@ -254,6 +304,8 @@ export async function initCloud() {
         if (event === 'SIGNED_OUT') setState({ status: 'login', userId: null, userEmail: null })
       })
       await startSupabase()
+      window.addEventListener('online', () => void resync())
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void resync() })
       return
     }
     setState({ status: 'local' })
