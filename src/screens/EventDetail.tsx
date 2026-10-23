@@ -26,10 +26,14 @@ export default function EventDetail() {
     if (isNew && dog && !e) {
       const kind = (params.get('kind') as Event['kind']) || 'seizure'
       setE({ id: uid(), dogId: dog.id, kind, start: nowLocalISO(), tz: dog.tz, count: kind === 'seizure' ? 1 : undefined, unusualItems: kind === 'unusual' ? [] : undefined, source: 'manual', by: currentUserId() ?? undefined })
+    } else if (isNew && dog && e && e.dogId !== dog.id) {
+      // the dog was switched with the tabs while filling a new record: the record belongs to the dog now selected
+      setE({ ...e, dogId: dog.id, tz: dog.tz, pattern: undefined })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNew, dog?.id])
   const [busy, setBusy] = useState(false)
+  const saving = useRef(false)
   useEffect(() => {
     if (stored && !e) setE(stored)
   }, [stored, e])
@@ -60,7 +64,10 @@ export default function EventDetail() {
   async function save() {
     if (!e) return
     if (isNew) {
-      await db.events.add({ ...e, updatedAt: new Date().toISOString() })
+      if (saving.current) return
+      saving.current = true
+      // always file a new record under the dog shown in the tabs at the moment of saving
+      await db.events.add({ ...e, dogId: dog!.id, tz: dog!.tz, updatedAt: new Date().toISOString() })
       attachWeatherSoon(e.id)
       nav('/timeline', { replace: true })
       return
