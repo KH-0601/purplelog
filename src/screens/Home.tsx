@@ -79,7 +79,9 @@ export default function Home() {
     await db.doseLogs.add(log)
   }
   const nowIso = nowLocalISO()
-  const openPlans = plans.filter((p) => !p.doneLogId && !p.cancelled)
+  // a plan is also done when the same drug was recorded another way within 2 h of its time
+  const coveredByLog = (p: DosePlan) => doseLogs.some((l) => l.generic === p.generic && l.kind !== 'skipped' && Math.abs(new Date(l.time).getTime() - new Date(p.time).getTime()) <= 2 * 3600000)
+  const openPlans = plans.filter((p) => !p.doneLogId && !p.cancelled && !coveredByLog(p))
   const duePlans = openPlans.filter((p) => p.time.slice(0, 10) <= now)
   const upcoming = openPlans.filter((p) => p.time.slice(0, 10) > now).slice(0, 5)
   async function givePlan(p: DosePlan) {

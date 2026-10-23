@@ -26,7 +26,7 @@ const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 type Doc = { tbl: string; id: string; body: Record<string, unknown>; deleted: boolean }
 type Med = { id: string; dogId: string; generic: string; kind: string; scheduled?: boolean; endDate?: string; doses: { date: string; timesPerDay: number; mgPerDose?: number }[]; scheduleTimes?: string[]; slotDoses?: Record<string, number> }
 type Plan = { id: string; dogId: string; generic: string; time: string; doneLogId?: string; cancelled?: boolean; mgPerDose?: number }
-type Log = { medicationId: string; time: string; slot?: string; slotDate?: string }
+type Log = { medicationId: string; time: string; slot?: string; slotDate?: string; dogId?: string; generic?: string; kind?: string }
 type Dog = { id: string; name: string; tz?: string }
 
 const NAMES: Record<string, string> = { phenobarbital: 'フェノバルビタール', potassium_bromide: '臭化カリウム', zonisamide: 'ゾニサミド', levetiracetam: 'レベチラセタム', gabapentin: 'ガバペンチン' }
@@ -99,6 +99,9 @@ Deno.serve(async (req) => {
       }
     }
     for (const p of plans.filter((x) => x.dogId === dog.id && !x.doneLogId && !x.cancelled)) {
+      // same drug recorded another way within 2 h of the plan → done
+      const pt = localMs(p.time.slice(0, 16))
+      if (logs.some((l) => l.dogId === dog.id && l.generic === p.generic && l.kind !== 'skipped' && Math.abs(localMs(l.time.slice(0, 16)) - pt) <= 2 * 3600000)) continue
       const mins = minutesBetween(p.time.slice(0, 16), nowLocal)
       if (mins > 0 && mins <= REMIND_WINDOW_MIN) due.push({ key: `p:${p.id}`, dogId: dog.id, text: `${dog.name}: ${NAMES[p.generic] ?? p.generic}（頓服）${p.time.slice(5, 16).replace('T', ' ')}`, minutes: mins })
     }

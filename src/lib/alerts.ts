@@ -39,6 +39,9 @@ export function computeDue(meds: Medication[], plans: DosePlan[], logs: DoseLog[
   }
   for (const p of plans) {
     if (p.doneLogId || p.cancelled) continue
+    // a dose of the same drug entered another way (e.g. the manual dose form) within 2 h of the plan counts as done
+    const pt = new Date(p.time).getTime()
+    if (logs.some((l) => l.generic === p.generic && l.kind !== 'skipped' && Math.abs(new Date(l.time).getTime() - pt) <= 2 * 3600000)) continue
     const overdueMin = (now.getTime() - new Date(p.time).getTime()) / 60000
     if (overdueMin > 0 && overdueMin <= REMIND_WINDOW_MIN) out.push({ key: `p:${p.id}`, kind: 'plan', medicationId: p.medicationId, generic: p.generic, due: p.time, planId: p.id, mgPerDose: p.mgPerDose, overdueMin })
   }
