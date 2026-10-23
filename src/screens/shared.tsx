@@ -107,8 +107,11 @@ export function nearestSlotDate(slot: string, atLocalIso: string): string {
 export function targetSlotDate(slot: string, nowIso: string, isHandled: (date: string) => boolean, startDate?: string): string {
   const day = nowIso.slice(0, 10)
   const yest = shiftDate(day, -1)
-  const aheadMin = (slotMs(day, slot) - new Date(nowIso.slice(0, 16)).getTime()) / 60000
-  if (aheadMin > 360 && !isHandled(yest) && (!startDate || startDate <= yest)) return yest
+  const nowMs = new Date(nowIso.slice(0, 16)).getTime()
+  const aheadMin = (slotMs(day, slot) - nowMs) / 60000
+  const sinceYestMin = (nowMs - slotMs(yest, slot)) / 60000
+  // yesterday's slot is offered only for 12 h after its time (late-night doses recorded the next morning)
+  if (aheadMin > 360 && sinceYestMin <= 720 && !isHandled(yest) && (!startDate || startDate <= yest)) return yest
   return day
 }
 /** Which day's slot a stored dose log covers (older logs fall back to the time's date). */

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import PushNudge from './PushNudge'
@@ -10,7 +11,7 @@ import { currentUserId } from '../lib/cloud'
 import { monthlyRows, ymOf } from '../lib/monthly'
 import { addDays, daysBetween, fmtDur, fmtMD, nowLocalISO, today } from '../lib/format'
 import { nextCheck, ruleFor } from '../lib/monitoring'
-import { CODES, EventTag, PATTERN_COLORS, coversSlot, currentDose, dailyMg, defaultSchedule, dogPatterns, eventLabel, isActiveMed, isScheduledMed, isUniformDose, slotDose, targetSlotDate } from './shared'
+import { CODES, EventTag, PATTERN_COLORS, coversSlot, currentDose, dailyMg, defaultSchedule, dogPatterns, eventLabel, isActiveMed, isScheduledMed, isUniformDose, slotDose, slotMs, targetSlotDate } from './shared'
 
 const GENERIC_TO_ANALYTE: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV' }
 
@@ -25,6 +26,10 @@ export default function Home() {
   const labs = useLabs(dog?.id)
   const doseLogs = useDoseLogs(dog?.id)
   const plans = useDosePlans(dog?.id)
+  // dose card view (remembered on this device); declared before the early return to keep hook order stable
+  const VIEW_KEY = 'purplelog.home.doseView'
+  const [doseView, setDoseViewState] = useState<'med' | 'time'>(() => { try { return (localStorage.getItem(VIEW_KEY) as 'med' | 'time') || 'time' } catch { return 'time' } })
+  const setDoseView = (v: 'med' | 'time') => { setDoseViewState(v); try { localStorage.setItem(VIEW_KEY, v) } catch { /* ignore */ } }
   if (!dog) return null
 
   const now = today()
@@ -84,6 +89,47 @@ export default function Home() {
   }
   async function cancelPlan(p: DosePlan) {
     if (confirm(t('plan.cancel') + '?')) await db.dosePlans.update(p.id, { cancelled: true })
+  }
+  // ---- "by time" view: one row per clock time with every drug due then
+  type TimeItem = { key: string; m?: Medication; slot: string; sd: string; mg?: number; log?: DoseLog; plan?: DosePlan; label: string }
+  const timeGroups = (() => {
+    const map = new Map<string, TimeItem[]>()
+    const nowIsoLocal = nowLocalISO()
+    for (const m of activeMeds) {
+      const d = currentDose(m)
+      const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(d?.timesPerDay ?? 2)
+      for (const slot of slots) {
+        const handled = (date: string) => doseLogs.some((l) => l.medicationId === m.id && coversSlot(l, date, slot))
+        const sd = targetSlotDate(slot, nowIsoLocal, handled, m.startDate)
+        const log = doseLogs.find((l) => l.medicationId === m.id && coversSlot(l, sd, slot))
+        const key = (sd !== now ? 'p' : '') + slot
+        const arr = map.get(key) ?? []
+        arr.push({ key: m.id + slot, m, slot, sd, mg: slotDose(m, slot) ?? d?.mgPerDose, log, label: t('meds.generics.' + m.generic, m.generic) })
+        map.set(key, arr)
+      }
+    }
+    for (const p of duePlans.filter((p) => p.time.slice(0, 10) === now)) {
+      const slot = p.time.slice(11, 16)
+      const arr = map.get(slot) ?? []
+      arr.push({ key: p.id, slot, sd: now, mg: p.mgPerDose, plan: p, label: t('meds.generics.' + p.generic, p.generic) })
+      map.set(slot, arr)
+    }
+    // yesterday's still-open slots first, then today's times in order ("24:00" last)
+    return [...map.entries()].sort((a, b) => (a[0].startsWith('p') === b[0].startsWith('p') ? a[0].localeCompare(b[0]) : a[0].startsWith('p') ? -1 : 1)).map(([key, items]) => ({ key, slot: items[0].slot, prev: key.startsWith('p'), sd: items[0].sd, items }))
+  })()
+  const groupState = (g: (typeof timeGroups)[number]) => {
+    const open = g.items.filter((it) => !it.log)
+    if (!open.length) return 'done'
+    const due = g.prev || slotMs(g.sd, g.slot) <= Date.now()
+    return due ? 'late' : 'soon'
+  }
+  const nextKey = timeGroups.find((g) => groupState(g) === 'soon')?.key
+  async function giveAll(g: (typeof timeGroups)[number]) {
+    for (const it of g.items) {
+      if (it.log) continue
+      if (it.plan) await givePlan(it.plan)
+      else if (it.m) await giveDose(it.m, it.slot, it.sd)
+    }
   }
   async function undoDose(log: DoseLog) {
     if (confirm(t('dose.undoConfirm'))) await db.doseLogs.delete(log.id)
@@ -148,14 +194,64 @@ export default function Home() {
       </div>
 
       <div className="card">
-        <h4>{t('dose.today')}</h4>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <h4 style={{ margin: 0 }}>{t('dose.today')}</h4>
+          {activeMeds.length > 0 && (
+            <div className="seg">
+              <button className={doseView === 'time' ? 'on' : ''} onClick={() => setDoseView('time')}>{t('dose.byTime')}</button>
+              <button className={doseView === 'med' ? 'on' : ''} onClick={() => setDoseView('med')}>{t('dose.byMed')}</button>
+            </div>
+          )}
+        </div>
+        {doseView === 'time' && activeMeds.length > 0 && (
+          <div className="tl">
+            {timeGroups.map((g) => {
+              const st = groupState(g)
+              return (
+                <div key={g.key} className={'tl-row ' + st + (g.key === nextKey ? ' next' : '')}>
+                  <div className="tl-time">
+                    {g.prev && <small className="prevtag">{t('dose.prevDay')}</small>}
+                    <b>{g.slot}</b>
+                    {st === 'done' ? <span className="tl-st ok">✓</span> : st === 'late' ? <span className="tl-st late">{t('dose.late')}</span> : g.key === nextKey ? <span className="tl-st nx">{t('dose.next')}</span> : null}
+                  </div>
+                  <div className="tl-body">
+                    {g.items.map((it) => (
+                      <div key={it.key} className={'tl-item' + (it.log ? (it.log.kind === 'skipped' ? ' skipped' : ' done') : '')}>
+                        <span className="grow">
+                          <b>{it.label}</b>{it.mg != null ? <span className="note"> {it.mg} mg</span> : null}{it.plan ? <span className="tag w" style={{ marginLeft: 4 }}>{t('add.prn')}</span> : null}
+                          {it.log && <span className="note"> {it.log.kind === 'skipped' ? t('dose.skipped') : `✓ ${it.log.time.slice(11, 16)}`}</span>}
+                        </span>
+                        {it.log ? (
+                          <button className="tag g" onClick={() => undoDose(it.log!)} title={t('dose.undo')}>↺</button>
+                        ) : it.plan ? (
+                          <>
+                            <button className="dose-btn sm" onClick={() => givePlan(it.plan!)}>{t('dose.give')}</button>
+                            <button className="dose-skip" onClick={() => cancelPlan(it.plan!)}>×</button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="dose-btn sm" onClick={() => giveDose(it.m!, it.slot, it.sd)}>{t('dose.give')}</button>
+                            <button className="dose-skip" title={t('dose.skipTitle')} onClick={() => confirm(t('dose.skipConfirm', { slot: (g.prev ? t('dose.prevDay') + ' ' : '') + it.slot })) && skipDose(it.m!, it.slot, it.sd)}>×</button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    {g.items.filter((it) => !it.log).length > 1 && (
+                      <button className="btn sm tl-all" onClick={() => giveAll(g)}>{t('dose.giveAll', { time: g.slot })}</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
         {activeMeds.length === 0 && (
           <div className="note">
             {t('dose.noMeds')}{' '}
             <a href="#/meds">{t('nav.meds')} →</a>
           </div>
         )}
-        {activeMeds.map((m) => {
+        {doseView === 'med' && activeMeds.map((m) => {
           const d = currentDose(m)
           const slots = m.scheduleTimes?.length ? m.scheduleTimes : defaultSchedule(d?.timesPerDay ?? 2)
           const uniform = isUniformDose(m)
@@ -196,10 +292,10 @@ export default function Home() {
             </div>
           )
         })}
-        {duePlans.length > 0 && (
+        {duePlans.filter((p) => doseView === 'med' || p.time.slice(0, 10) !== now).length > 0 && (
           <div className="dose-row">
             <div className="dose-name"><b>{t('plan.title')}</b> <span className="tag w">{t('add.prn')}</span></div>
-            {duePlans.map((p) => (
+            {duePlans.filter((p) => doseView === 'med' || p.time.slice(0, 10) !== now).map((p) => (
               <div className="plan-row" key={p.id}>
                 <span className="d">{p.time.slice(5, 10).replace('-', '/')} {p.time.slice(11, 16)}</span>
                 <span className="grow">{t('meds.generics.' + p.generic, p.generic)}{p.mgPerDose ? ` ${p.mgPerDose} mg` : ''}{p.note ? <span className="note"> {p.note}</span> : ''}{p.time < nowIso && <span className="tag w" style={{ marginLeft: 6 }}>{t('alert.overdue', { min: Math.round((new Date(nowIso).getTime() - new Date(p.time).getTime()) / 60000) })}</span>}</span>

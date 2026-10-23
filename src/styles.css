@@ -31,6 +31,28 @@ a{color:var(--accent-ink);text-decoration:none}
 .dose-btn.skipped{background:#F1EFF5;color:var(--muted);border-style:dashed}
 .dose-btn.prev{border-style:dashed}
 .prevtag{display:block;font-size:10px;color:var(--warn);font-weight:700;line-height:1}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:4px 12px;font-size:12px;color:var(--muted)}
+.seg button.on{background:var(--accent);color:#fff;font-weight:700}
+.tl{position:relative;margin-top:8px}
+.tl-row{display:flex;gap:10px;padding:8px 0;border-top:1px solid #F0EDF5;position:relative}
+.tl-row:first-child{border-top:0}
+.tl-time{flex:none;width:64px;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.tl-time b{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:18px;line-height:1.1}
+.tl-st{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px}
+.tl-st.ok{color:var(--ok);background:var(--ok-soft)}
+.tl-st.late{color:#fff;background:var(--warn)}
+.tl-st.nx{color:#fff;background:var(--accent)}
+.tl-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.tl-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:10px;background:#FAF8FE}
+.tl-item.done{background:var(--ok-soft)}
+.tl-item.done b{color:var(--ok)}
+.tl-item.skipped{background:#F1EFF5;color:var(--muted)}
+.tl-row.done{opacity:.75}
+.tl-row.late .tl-time b{color:var(--warn)}
+.tl-row.next{background:linear-gradient(90deg,var(--accent-soft),transparent 70%);border-radius:10px;padding-left:6px}
+.dose-btn.sm{padding:5px 10px;font-size:12.5px}
+.tl-all{align-self:flex-start;margin-top:2px}
 .dogbar{display:flex;gap:6px;align-items:stretch;padding:0 14px 8px;position:sticky;top:44px;background:var(--bg);z-index:5}
 .dogtab{flex:1;min-height:44px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);font-size:16px;font-weight:700;color:var(--muted);padding:6px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dogtab.on{background:var(--accent);border-color:var(--accent);color:#fff}
