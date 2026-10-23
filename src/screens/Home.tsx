@@ -110,10 +110,12 @@ export default function Home() {
         map.set(key, arr)
       }
     }
-    for (const p of duePlans.filter((p) => p.time.slice(0, 10) === now)) {
+    // today's as-needed plans, given ones included (they stay on the list with ✓ and the time given)
+    for (const p of plans.filter((p) => !p.cancelled && p.time.slice(0, 10) === now)) {
       const slot = p.time.slice(11, 16)
+      const log = (p.doneLogId ? doseLogs.find((l) => l.id === p.doneLogId) : undefined) ?? doseLogs.find((l) => l.generic === p.generic && l.kind !== 'skipped' && Math.abs(new Date(l.time).getTime() - new Date(p.time).getTime()) <= 2 * 3600000)
       const arr = map.get(slot) ?? []
-      arr.push({ key: p.id, slot, sd: now, mg: p.mgPerDose, plan: p, label: t('meds.generics.' + p.generic, p.generic) })
+      arr.push({ key: p.id, slot, sd: now, mg: p.mgPerDose, plan: p, log, label: t('meds.generics.' + p.generic, p.generic) })
       map.set(slot, arr)
     }
     // yesterday's still-open slots first, then today's times in order ("24:00" last)
@@ -132,6 +134,12 @@ export default function Home() {
       if (it.plan) await givePlan(it.plan)
       else if (it.m) await giveDose(it.m, it.slot, it.sd)
     }
+  }
+  /** Undo a given as-needed plan: remove the dose record and reopen the plan. */
+  async function undoPlan(p: DosePlan, log: DoseLog) {
+    if (!confirm(t('dose.undoConfirm'))) return
+    await db.doseLogs.delete(log.id)
+    if (p.doneLogId) await db.dosePlans.update(p.id, { doneLogId: undefined })
   }
   async function undoDose(log: DoseLog) {
     if (confirm(t('dose.undoConfirm'))) await db.doseLogs.delete(log.id)
@@ -224,7 +232,7 @@ export default function Home() {
                           {it.log && <span className="note"> {it.log.kind === 'skipped' ? t('dose.skipped') : `✓ ${it.log.time.slice(11, 16)}`}</span>}
                         </span>
                         {it.log ? (
-                          <button className="tag g" onClick={() => undoDose(it.log!)} title={t('dose.undo')}>↺</button>
+                          <button className="tag g" onClick={() => (it.plan ? undoPlan(it.plan, it.log!) : undoDose(it.log!))} title={t('dose.undo')}>↺</button>
                         ) : it.plan ? (
                           <>
                             <button className="dose-btn sm" onClick={() => givePlan(it.plan!)}>{t('dose.give')}</button>
