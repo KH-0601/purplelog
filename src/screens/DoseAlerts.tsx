@@ -5,6 +5,7 @@ import { db, uid, type DoseLog } from '../db'
 import { useDogs, useSettings } from '../lib/useData'
 import { currentUserId } from '../lib/cloud'
 import { dogColorMap } from '../lib/dogColor'
+import { fmtDayClock } from './shared'
 import { beep, computeDue, pickToAlert, snooze, systemNotify, toLocalISO, vibrate, type DueItem } from '../lib/alerts'
 
 const NONE: never[] = []
@@ -93,7 +94,7 @@ export default function DoseAlerts() {
               <div className="row" key={it.key}>
                 <span className="grow">
                   <b>{t('meds.generics.' + it.generic, it.generic)}</b>
-                  {it.mgPerDose ? ` ${it.mgPerDose} mg` : ''} · {it.due.slice(5, 10).replace('-', '/')} {it.due.slice(11, 16)}
+                  {it.mgPerDose ? ` ${it.mgPerDose} mg` : ''} · {fmtDayClock(it.due)}
                   <div className="note">{it.kind === 'plan' ? t('add.prn') : t('add.scheduled')} · {t('alert.overdue', { min: Math.round(it.overdueMin) })}</div>
                 </span>
                 <button className="btn sm" style={{ background: colors[d.id] }} onClick={() => give(it)}>{t('dose.give')}</button>

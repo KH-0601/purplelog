@@ -114,6 +114,17 @@ export function targetSlotDate(slot: string, nowIso: string, isHandled: (date: s
   if (aheadMin > 360 && sinceYestMin <= 720 && !isHandled(yest) && (!startDate || startDate <= yest)) return yest
   return day
 }
+/** A local date-time at midnight belongs to the previous day as "24:00" (house convention). Returns [day, HH:MM]. */
+export function dayAndClock(iso: string): [string, string] {
+  const day = iso.slice(0, 10)
+  const hm = iso.slice(11, 16)
+  return hm === '00:00' ? [shiftDate(day, -1), '24:00'] : [day, hm]
+}
+/** "10/24 24:00" style label for a plan or due time. */
+export function fmtDayClock(iso: string): string {
+  const [d, hm] = dayAndClock(iso)
+  return `${d.slice(5, 10).replace('-', '/')} ${hm}`
+}
 /** Which day's slot a stored dose log covers (older logs fall back to the time's date). */
 export const logSlotDate = (l: { slotDate?: string; time: string }) => l.slotDate ?? l.time.slice(0, 10)
 /** Does this log cover `slot` on `date`? (legacy logs without a slot: same date, within 3 h) */

@@ -11,7 +11,7 @@ import { currentUserId } from '../lib/cloud'
 import { monthlyRows, ymOf } from '../lib/monthly'
 import { addDays, daysBetween, fmtDur, fmtMD, nowLocalISO, today } from '../lib/format'
 import { nextCheck, ruleFor } from '../lib/monitoring'
-import { CODES, EventTag, PATTERN_COLORS, coversSlot, currentDose, dailyMg, defaultSchedule, dogPatterns, eventLabel, isActiveMed, isScheduledMed, isUniformDose, slotDose, slotMs, targetSlotDate } from './shared'
+import { CODES, EventTag, PATTERN_COLORS, coversSlot, currentDose, dailyMg, defaultSchedule, dogPatterns, eventLabel, isActiveMed, isScheduledMed, isUniformDose, dayAndClock, fmtDayClock, shiftDate, slotDose, slotMs, targetSlotDate } from './shared'
 
 const GENERIC_TO_ANALYTE: Record<string, string> = { phenobarbital: 'PB', potassium_bromide: 'KBr', zonisamide: 'ZNS', levetiracetam: 'LEV' }
 
@@ -82,8 +82,9 @@ export default function Home() {
   // a plan is also done when the same drug was recorded another way within 2 h of its time
   const coveredByLog = (p: DosePlan) => doseLogs.some((l) => l.generic === p.generic && l.kind !== 'skipped' && Math.abs(new Date(l.time).getTime() - new Date(p.time).getTime()) <= 2 * 3600000)
   const openPlans = plans.filter((p) => !p.doneLogId && !p.cancelled && !coveredByLog(p))
-  const duePlans = openPlans.filter((p) => p.time.slice(0, 10) <= now)
-  const upcoming = openPlans.filter((p) => p.time.slice(0, 10) > now).slice(0, 5)
+  const planDay = (p: DosePlan) => dayAndClock(p.time)[0]
+  const duePlans = openPlans.filter((p) => planDay(p) <= now)
+  const upcoming = openPlans.filter((p) => planDay(p) > now).slice(0, 5)
   async function givePlan(p: DosePlan) {
     const log: DoseLog = { id: uid(), dogId: dog!.id, medicationId: p.medicationId, generic: p.generic, time: nowLocalISO(), slot: 'prn', kind: 'prn', mgPerDose: p.mgPerDose, note: p.note, by: currentUserId() ?? undefined }
     await db.doseLogs.add(log)
@@ -111,12 +112,20 @@ export default function Home() {
       }
     }
     // today's as-needed plans, given ones included (they stay on the list with ✓ and the time given)
-    for (const p of plans.filter((p) => !p.cancelled && p.time.slice(0, 10) === now)) {
-      const slot = p.time.slice(11, 16)
+    for (const p of plans.filter((p) => {
+      if (p.cancelled) return false
+      const day = planDay(p)
+      if (day === now) return true
+      // last night's 24:00 plan stays visible (as 前日分) for 12 h while it is still open
+      return day === shiftDate(now, -1) && !p.doneLogId && Date.now() - new Date(p.time).getTime() <= 12 * 3600000
+    })) {
+      const [pday, slot] = dayAndClock(p.time)
+      const prevKey = pday !== now
       const log = (p.doneLogId ? doseLogs.find((l) => l.id === p.doneLogId) : undefined) ?? doseLogs.find((l) => l.generic === p.generic && l.kind !== 'skipped' && Math.abs(new Date(l.time).getTime() - new Date(p.time).getTime()) <= 2 * 3600000)
-      const arr = map.get(slot) ?? []
-      arr.push({ key: p.id, slot, sd: now, mg: p.mgPerDose, plan: p, log, label: t('meds.generics.' + p.generic, p.generic) })
-      map.set(slot, arr)
+      const gk = (prevKey ? 'p' : '') + slot
+      const arr = map.get(gk) ?? []
+      arr.push({ key: p.id, slot, sd: pday, mg: p.mgPerDose, plan: p, log, label: t('meds.generics.' + p.generic, p.generic) })
+      map.set(gk, arr)
     }
     // yesterday's still-open slots first, then today's times in order ("24:00" last)
     return [...map.entries()].sort((a, b) => (a[0].startsWith('p') === b[0].startsWith('p') ? a[0].localeCompare(b[0]) : a[0].startsWith('p') ? -1 : 1)).map(([key, items]) => ({ key, slot: items[0].slot, prev: key.startsWith('p'), sd: items[0].sd, items }))
@@ -302,12 +311,12 @@ export default function Home() {
             </div>
           )
         })}
-        {duePlans.filter((p) => doseView === 'med' || p.time.slice(0, 10) !== now).length > 0 && (
+        {duePlans.filter((p) => doseView === 'med' || planDay(p) !== now).length > 0 && (
           <div className="dose-row">
             <div className="dose-name"><b>{t('plan.title')}</b> <span className="tag w">{t('add.prn')}</span></div>
-            {duePlans.filter((p) => doseView === 'med' || p.time.slice(0, 10) !== now).map((p) => (
+            {duePlans.filter((p) => doseView === 'med' || planDay(p) !== now).map((p) => (
               <div className="plan-row" key={p.id}>
-                <span className="d">{p.time.slice(5, 10).replace('-', '/')} {p.time.slice(11, 16)}</span>
+                <span className="d">{fmtDayClock(p.time)}</span>
                 <span className="grow">{t('meds.generics.' + p.generic, p.generic)}{p.mgPerDose ? ` ${p.mgPerDose} mg` : ''}{p.note ? <span className="note"> {p.note}</span> : ''}{p.time < nowIso && <span className="tag w" style={{ marginLeft: 6 }}>{t('alert.overdue', { min: Math.round((new Date(nowIso).getTime() - new Date(p.time).getTime()) / 60000) })}</span>}</span>
                 <button className="dose-btn" onClick={() => givePlan(p)}>{t('dose.give')}</button>
                 <button className="tag g" onClick={() => cancelPlan(p)}>×</button>
@@ -326,7 +335,7 @@ export default function Home() {
             <h4>{t('plan.upcoming')}</h4>
             {upcoming.map((p) => (
               <div className="plan-row" key={p.id}>
-                <span className="d">{p.time.slice(5, 10).replace('-', '/')} {p.time.slice(11, 16)}</span>
+                <span className="d">{fmtDayClock(p.time)}</span>
                 <span className="grow">{t('meds.generics.' + p.generic, p.generic)}{p.mgPerDose ? ` ${p.mgPerDose} mg` : ''}{p.note ? <span className="note"> {p.note}</span> : ''}</span>
                 <button className="tag g" onClick={() => cancelPlan(p)}>×</button>
               </div>

@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       const pt = localMs(p.time.slice(0, 16))
       if (logs.some((l) => l.dogId === dog.id && l.generic === p.generic && l.kind !== 'skipped' && Math.abs(localMs(l.time.slice(0, 16)) - pt) <= 2 * 3600000)) continue
       const mins = minutesBetween(p.time.slice(0, 16), nowLocal)
-      if (mins > 0 && mins <= REMIND_WINDOW_MIN) due.push({ key: `p:${p.id}`, dogId: dog.id, text: `${dog.name}: ${NAMES[p.generic] ?? p.generic}（頓服）${p.time.slice(5, 16).replace('T', ' ')}`, minutes: mins })
+      if (mins > 0 && mins <= REMIND_WINDOW_MIN) due.push({ key: `p:${p.id}`, dogId: dog.id, text: `${dog.name}: ${NAMES[p.generic] ?? p.generic}（頓服）${p.time.slice(11, 16) === '00:00' ? shiftDate(p.time.slice(0, 10), -1).slice(5).replace('-', '/') + ' 24:00' : p.time.slice(5, 16).replace('T', ' ').replace('-', '/')}`, minutes: mins })
     }
   }
   if (!due.length) return new Response(JSON.stringify({ due: 0 }))
