@@ -61,6 +61,15 @@ export default function EventDetail() {
   if (!e || !dog) return null
 
   const set = (patch: Partial<Event>) => setE({ ...e, ...patch })
+  /** A rescue drug entered on the seizure record is also a dose: make sure a matching as-needed dose record exists. */
+  async function ensureRescueLog(ev: Event, dogId: string) {
+    const r = ev.rescueMed
+    if (!r?.generic || !r.time) return
+    const at = new Date(r.time.slice(0, 16)).getTime()
+    const exists = await db.doseLogs.where('dogId').equals(dogId).filter((l) => l.generic === r.generic && Math.abs(new Date(l.time.slice(0, 16)).getTime() - at) <= 15 * 60000).first()
+    if (exists) return
+    await db.doseLogs.add({ id: uid(), dogId, medicationId: 'prn:' + r.generic, generic: r.generic, time: r.time.slice(0, 16), slot: 'prn', kind: 'prn', note: t('event.rescueFromSeizure'), by: currentUserId() ?? undefined })
+  }
   async function save() {
     if (!e) return
     if (isNew) {
@@ -68,11 +77,13 @@ export default function EventDetail() {
       saving.current = true
       // always file a new record under the dog shown in the tabs at the moment of saving
       await db.events.add({ ...e, dogId: dog!.id, tz: dog!.tz, updatedAt: new Date().toISOString() })
+      await ensureRescueLog(e, dog!.id)
       attachWeatherSoon(e.id)
       nav('/timeline', { replace: true })
       return
     }
     await db.events.put({ ...e, updatedAt: new Date().toISOString() })
+    await ensureRescueLog(e, e.dogId)
     nav(-1)
   }
   async function remove() {
