@@ -24,7 +24,7 @@ function useForecast(dog?: Dog) {
   return { data, err }
 }
 
-function PressureChart({ data, blocks, from, to, seizures, height }: { data: PressureForecast; blocks: Block[]; from: string; to: string; seizures: Event[]; height: number }) {
+function PressureChart({ data, blocks, from, to, seizures, height, daily = false }: { data: PressureForecast; blocks: Block[]; from: string; to: string; seizures: Event[]; height: number; daily?: boolean }) {
   const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const option = useMemo<echarts.EChartsOption>(() => {
@@ -43,7 +43,7 @@ function PressureChart({ data, blocks, from, to, seizures, height }: { data: Pre
     return {
       animation: false,
       grid: { left: 40, right: 10, top: 22, bottom: 26 },
-      xAxis: { type: 'time', min: from, max: to, axisLabel: { fontSize: 10, hideOverlap: true, formatter: (v: number) => { const d = new Date(v); return d.getHours() === 0 ? `${d.getMonth() + 1}/${d.getDate()}` : `${d.getHours()}時` } }, splitLine: { show: true, lineStyle: { color: '#F0EDF5' } } },
+      xAxis: { type: 'time', min: from, max: to, axisLabel: { fontSize: 10, hideOverlap: true, formatter: (v: number) => { const d = new Date(v); return d.getHours() === 0 ? `${d.getMonth() + 1}/${d.getDate()}` : daily ? '' : `${d.getHours()}時` } }, splitLine: { show: true, lineStyle: { color: '#F0EDF5' } } },
       yAxis: { type: 'value', min, max, axisLabel: { fontSize: 10 }, splitLine: { lineStyle: { color: '#EFEDF4', type: 'dashed' } } },
       series: [
         { type: 'line', data: pts, showSymbol: false, smooth: 0.2, lineStyle: { width: 2.5, color: '#3B7DD8' }, markArea: { silent: true, data: areas as never }, markLine: { silent: true, symbol: 'none', label: { formatter: t('pressure.now'), fontSize: 10 }, lineStyle: { color: '#6B4FBB', type: 'solid', width: 1.5 }, data: [{ xAxis: now }] } },
@@ -51,7 +51,7 @@ function PressureChart({ data, blocks, from, to, seizures, height }: { data: Pre
       ],
       tooltip: { trigger: 'axis', valueFormatter: (v) => (v == null ? '' : `${v} hPa`) },
     }
-  }, [data, blocks, from, to, seizures, t])
+  }, [data, blocks, from, to, seizures, daily, t])
   useEffect(() => {
     if (!ref.current) return
     const c = echarts.init(ref.current, undefined, { renderer: 'svg' })
@@ -73,7 +73,7 @@ function upcoming(blocks: Block[]) {
   return { warn: fut.find((b) => b.level === 'warn'), caution: fut.find((b) => b.level === 'caution') }
 }
 
-/** Compact card for Home: next 24 h. Tap → full page. */
+/** Compact card for Home: next 48 h. Tap → full page. */
 export function PressureCard() {
   const { t } = useTranslation()
   const nav = useNavigate()
@@ -87,7 +87,7 @@ export function PressureCard() {
   )
   const blocks = data ? toBlocks(data, s.caution, s.warn) : []
   const now = nowLocalISO()
-  const to = new Date(Date.now() + 24 * 3600000)
+  const to = new Date(Date.now() + 48 * 3600000)
   const toIso = new Date(to.getTime() - to.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
   const from = new Date(Date.now() - 6 * 3600000)
   const fromIso = new Date(from.getTime() - from.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
@@ -115,24 +115,32 @@ export function PressureCard() {
   )
 }
 
-/** Full page: past 24 h + next 48 h, with 3-hour tiles. */
+const SPANS = [1, 3, 7] as const
+const SPAN_KEY = 'purplelog.pressure.span'
+
+/** Full page: past 24 h + the next 1 / 3 / 7 days, with 3-hour tiles. */
 export default function PressurePage() {
   const { t } = useTranslation()
   const dog = useDog()
   const events = useEvents(dog?.id)
   const { data, err } = useForecast(dog)
+  const [span, setSpan] = useState<number>(() => { try { return Number(localStorage.getItem(SPAN_KEY)) || 3 } catch { return 3 } })
   const s = pressureSettings(dog)
   if (!dog) return null
   if (dog.gridLat == null) return <div className="card"><div className="note">{t('pressure.noGrid')}</div></div>
   const blocks = data ? toBlocks(data, s.caution, s.warn) : []
   const now = nowLocalISO()
   const shift = (h: number) => { const d = new Date(Date.now() + h * 3600000); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16) }
-  const fromIso = shift(-24), toIso = shift(48)
+  const fromIso = shift(-24), toIso = shift(span * 24)
+  const pick = (d: number) => { setSpan(d); try { localStorage.setItem(SPAN_KEY, String(d)) } catch { /* ignore */ } }
   const tiles = blocks.filter((b) => b.end > shift(-3) && b.start < toIso)
   return (
     <>
       <div className="card">
         <h4>{t('pressure.title')}（{dog.regionName || t('pressure.area')}）</h4>
+        <div className="seg" style={{ marginBottom: 6 }}>
+          {SPANS.map((d) => <button key={d} className={span === d ? 'on' : ''} onClick={() => pick(d)}>{t('pressure.span', { d })}</button>)}
+        </div>
         {err && <div className="note">{t('pressure.error')}</div>}
         {!data && !err && <div className="note">{t('pressure.loading')}</div>}
         {data && (
@@ -148,7 +156,7 @@ export default function PressurePage() {
                 </div>
               ))}
             </div>
-            <PressureChart data={data} blocks={blocks} from={fromIso} to={toIso} seizures={events.filter((e) => e.kind === 'seizure')} height={300} />
+            <PressureChart data={data} blocks={blocks} from={fromIso} to={toIso} seizures={events.filter((e) => e.kind === 'seizure')} height={300} daily={span === 7} />
             <div className="legend">
               <span><i style={{ background: '#3B7DD8' }} />{t('pressure.line')}</span>
               <span><i style={{ background: LEVEL_FILL.caution }} />{t('pressure.caution')}</span>
@@ -158,6 +166,7 @@ export default function PressurePage() {
           </>
         )}
         <div className="note" style={{ marginTop: 6 }}>{t('pressure.rule', { c: s.caution, w: s.warn })}</div>
+        {span === 7 && <div className="note">{t('pressure.farNote')}</div>}
         <div className="note">{s.enabled ? t('pressure.alertOn', { h: s.leadHours }) : t('pressure.alertOff')}</div>
       </div>
     </>

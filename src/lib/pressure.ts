@@ -34,7 +34,7 @@ export async function fetchPressureForecast(lat: number, lon: number, tz = 'Asia
   const key = `${lat},${lon}`
   const hit = cache.get(key)
   if (hit && Date.now() - hit.at < 20 * 60000) return hit.data
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=pressure_msl,temperature_2m,weather_code&past_days=1&forecast_days=3&timezone=${encodeURIComponent(tz)}`
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=pressure_msl,temperature_2m,weather_code&past_days=1&forecast_days=8&timezone=${encodeURIComponent(tz)}`
   const r = await fetch(url)
   if (!r.ok) throw new Error('pressure ' + r.status)
   const j = await r.json()
