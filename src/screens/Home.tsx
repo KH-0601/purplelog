@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import PushNudge from './PushNudge'
+import { PressureCard } from './Pressure'
 import DogPhoto from './DogPhoto'
 import { dogColorMap } from '../lib/dogColor'
 import { useDogs } from '../lib/useData'
@@ -344,6 +345,7 @@ export default function Home() {
         )}
       </div>
 
+      <PressureCard />
       <div className="card">
         <h4>{t('home.last30')}</h4>
         <div className="mini">

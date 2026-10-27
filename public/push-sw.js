@@ -26,6 +26,8 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) {
+        // an open app goes to the page the notification is about (e.g. the pressure outlook)
+        if ('navigate' in c && target.includes('#')) c.navigate(target).catch(() => {})
         if ('focus' in c) return c.focus()
       }
       return self.clients.openWindow(target)

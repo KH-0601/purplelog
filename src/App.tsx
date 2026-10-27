@@ -21,6 +21,7 @@ import DevDog from './screens/DevDog'
 import AddRecord from './screens/AddRecord'
 import DoseAlerts from './screens/DoseAlerts'
 import Login from './screens/Login'
+import PressurePage from './screens/Pressure'
 import { startSupabase } from './lib/cloud'
 
 /** Dog switcher: one large button per dog, always visible under the title. */
@@ -68,6 +69,7 @@ export default function App() {
     '/': t('nav.home'),
     '/timeline': t('timeline.title'),
     '/chart': t('chart.title'),
+    '/pressure': t('pressure.title'),
     '/meds': t('meds.title'),
     '/report': t('report.title'),
     '/settings': t('settings.title'),
@@ -122,6 +124,7 @@ export default function App() {
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/meds" element={<MedsLabs />} />
           <Route path="/chart" element={<LongTerm />} />
+          <Route path="/pressure" element={<PressurePage />} />
           <Route path="/report" element={<VetReport />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/dev/community" element={<DevCommunity />} />

@@ -229,6 +229,14 @@ export default function Settings() {
             <div className="note">{t('settings.recordNote')}</div>
           </div>
           <div className="card">
+            <h4>{t('pressure.settings')}</h4>
+            <div className="row"><span className="grow">{t('pressure.notify')}</span><button className={'toggle ' + (view.pressureAlert?.enabled !== false ? 'on' : '')} onClick={() => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), enabled: dog.pressureAlert?.enabled === false } })} /></div>
+            <div className="field"><span className="k">{t('pressure.leadHours')}</span><input type="number" min={0.5} max={12} step={0.5} defaultValue={view.pressureAlert?.leadHours ?? 2} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), leadHours: Number(e.target.value) || 2 } })} /></div>
+            <div className="field"><span className="k">{t('pressure.warnDrop')}</span><input type="number" min={0.5} step={0.5} defaultValue={view.pressureAlert?.warn ?? 2} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), warn: Number(e.target.value) || 2 } })} /></div>
+            <div className="field"><span className="k">{t('pressure.cautionDrop')}</span><input type="number" min={0.5} step={0.5} defaultValue={view.pressureAlert?.caution ?? 1} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), caution: Number(e.target.value) || 1 } })} /></div>
+            <div className="note">{t('pressure.settingsNote')}</div>
+          </div>
+          <div className="card">
             <h4>{t('settings.patterns')}</h4>
             <div className="note" style={{ marginBottom: 6 }}>{t('settings.patternsIntro')}</div>
             <div className="field"><span className="k">{t('settings.patternCount')}</span>

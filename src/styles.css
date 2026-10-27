@@ -53,6 +53,20 @@ a{color:var(--accent-ink);text-decoration:none}
 .tl-row.next{background:linear-gradient(90deg,var(--accent-soft),transparent 70%);border-radius:10px;padding-left:6px}
 .dose-btn.sm{padding:5px 10px;font-size:12.5px}
 .tl-all{align-self:flex-start;margin-top:2px}
+.pr-head{margin:6px 0 2px}
+.pr-badge{display:inline-block;border-radius:8px;padding:3px 8px;font-size:13px;font-weight:700}
+.pr-badge.warn{background:#FCE4E4;color:#C0392B}
+.pr-badge.caution{background:#FDF1D6;color:#9A6B12}
+.pr-badge.ok{background:var(--ok-soft);color:var(--ok)}
+.pr-tiles{display:flex;gap:4px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch}
+.pr-tile{flex:none;width:54px;border-radius:10px;background:#F6F4FB;text-align:center;padding:4px 2px;font-size:11px}
+.pr-tile.caution{background:#FDF1D6}
+.pr-tile.warn{background:#FCE4E4}
+.pr-tile.cur{outline:2px solid var(--accent)}
+.pr-t{font-weight:700}
+.pr-i{font-size:18px;line-height:1.2}
+.pr-d{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.pr-l{min-height:14px;font-weight:700;color:#C0392B}
 .dogbar{display:flex;gap:6px;align-items:stretch;padding:0 14px 8px;position:sticky;top:44px;background:var(--bg);z-index:5}
 .dogtab{flex:1;min-height:44px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);font-size:16px;font-weight:700;color:var(--muted);padding:6px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dogtab.on{background:var(--accent);border-color:var(--accent);color:#fff}

@@ -23,6 +23,8 @@ export interface Dog {
   color?: string
   /** Free-text description of the two seizure patterns offered on the seizure screen (A = darker purple, B = lighter). */
   seizurePatterns?: { A?: string; B?: string; C?: string }
+  /** Pressure-drop alerts: on unless enabled === false. Drops are hPa per 3-hour block; leadHours = how long before the block to notify. */
+  pressureAlert?: { enabled?: boolean; caution?: number; warn?: number; leadHours?: number }
   /** How many patterns this dog uses on the seizure screen: 1 (A only, plain button), 2 (A/B) or 3 (A/B/C). */
   patternCount?: 1 | 2 | 3
   /** small JPEG data URL shown on Home */
