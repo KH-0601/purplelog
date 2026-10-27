@@ -1,5 +1,5 @@
 // Supabase Edge Function: every 15 minutes, look at the pressure forecast for each dog's grid cell and
-// send one push notification shortly before a "warning" block (a sharp pressure drop) begins.
+// send one push notification shortly before a "warning" 6-hour block (a sharp pressure drop) begins.
 // Thresholds and lead time are per dog (Dog.pressureAlert), with app defaults below. Runs via Supabase Cron.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3'
@@ -13,11 +13,12 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET')
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
-// app guide values (same as the app's src/lib/pressure.ts)
-const DEFAULT_WARN = 2.0
+// app guide values (same as the app's src/lib/pressure.ts): hPa fall within a 6-hour block (03-09, 09-15, 15-21, 21-03)
+const DEFAULT_WARN = 3.5
 const DEFAULT_LEAD_H = 2
+const BLOCK_H = 6
 
-type Dog = { id: string; name: string; tz?: string; gridLat?: number; gridLon?: number; pressureAlert?: { enabled?: boolean; warn?: number; leadHours?: number } }
+type Dog = { id: string; name: string; tz?: string; gridLat?: number; gridLon?: number; pressureAlert?: { enabled?: boolean; warn6?: number; leadHours?: number } }
 
 const grid = (x: number) => Math.round(x * 4) / 4
 const localMs = (iso: string) => new Date(iso.slice(0, 16) + ':00Z').getTime()
@@ -50,18 +51,18 @@ Deno.serve(async (req) => {
     const p: (number | null)[] = j.hourly.pressure_msl
     const nowLocal = localIso(new Date(), tz)
     for (const dog of cellDogs) {
-      const warn = dog.pressureAlert?.warn ?? DEFAULT_WARN
+      const warn = dog.pressureAlert?.warn6 ?? DEFAULT_WARN
       const lead = dog.pressureAlert?.leadHours ?? DEFAULT_LEAD_H
-      // first warning block (3-hour block starting at 0,3,6,… local) that starts within the lead time
-      for (let i = 0; i + 3 < time.length; i++) {
-        if (Number(time[i].slice(11, 13)) % 3 !== 0) continue
-        const a = p[i], b = p[i + 3]
+      // first warning block (6-hour block starting at 03, 09, 15, 21 local) that starts within the lead time
+      for (let i = 0; i + BLOCK_H < time.length; i++) {
+        if (Number(time[i].slice(11, 13)) % BLOCK_H !== 3) continue
+        const a = p[i], b = p[i + BLOCK_H]
         if (a == null || b == null) continue
         const drop = +(b - a).toFixed(1)
         if (-drop < warn) continue
         const minsAhead = (localMs(time[i]) - localMs(nowLocal)) / 60000
         if (minsAhead < 0 || minsAhead > lead * 60) continue
-        const h1 = Number(time[i].slice(11, 13)), h2 = Number(time[i + 3].slice(11, 13)) || 24
+        const h1 = Number(time[i].slice(11, 13)), h2 = Number(time[i + BLOCK_H].slice(11, 13)) || 24
         messages.push({
           key: `pw:${dog.id}:${time[i]}`,
           title: '気圧が急に下がる見込みです',
