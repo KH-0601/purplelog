@@ -217,6 +217,7 @@ export default function Settings() {
         <>
           <div className="card">
             <h4>{t('settings.region')}</h4>
+            <div className="field"><span className="k">{t('pressure.placeName')}</span><input key={dog.id} placeholder={t('pressure.placeEx')} defaultValue={view.regionName ?? ''} onBlur={(e) => { const v = e.target.value.trim(); if (v !== (dog.regionName ?? '')) db.dogs.update(dog.id, { regionName: v || undefined }) }} /></div>
             <div className="field"><span className="k">{t('settings.grid')}</span><span>{dog.gridLat != null ? `${dog.gridLat}, ${dog.gridLon}` : t('settings.notSet')}</span></div>
             <div className="field"><input placeholder="lat" value={lat} onChange={(e) => setLat(e.target.value)} /><input placeholder="lon" value={lon} onChange={(e) => setLon(e.target.value)} />
               <button className="btn sec sm" onClick={() => lat && lon && setGrid(Number(lat), Number(lon))}>{t('btn.save')}</button></div>
