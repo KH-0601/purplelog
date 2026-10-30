@@ -6,6 +6,7 @@ import { useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useNames 
 import { buildEpisodes } from '../lib/episodes'
 import { daysBetween, fmtDate, fmtDur } from '../lib/format'
 import { EventTag, eventLabel } from './shared'
+import DoseEdit from './DoseEdit'
 
 type Item = { date: string; kind: 'cluster' | 'seizure' | 'unusual' | 'other' | 'dose' | 'doseLog' | 'prnLog' | 'lab' | 'weight'; label: string; sub?: string; id?: string; by?: string; logId?: string; members?: string[] }
 
@@ -29,6 +30,7 @@ export default function Timeline() {
   const setShowDoses = (v: boolean) => { setShowDosesState(v); persist(v, showPrn) }
   const setShowPrn = (v: boolean) => { setShowPrnState(v); persist(showDoses, v) }
   const [openCluster, setOpenCluster] = useState<string | null>(null)
+  const [editLog, setEditLog] = useState<string | null>(null)
   const names = useNames([...events.map((e) => e.by), ...doseLogs.map((l) => l.by)])
   if (!dog) return null
 
@@ -78,7 +80,7 @@ export default function Timeline() {
           const who = it.by && names[it.by] ? names[it.by] : ''
           return (
             <div key={i}>
-              <div className="row" style={{ cursor: it.id || isLab ? 'pointer' : 'default' }} onClick={() => (isLab ? setOpen(open === it.id ? null : it.id!) : it.members ? setOpenCluster(openCluster === it.id ? null : it.id!) : it.id ? nav(`/event/${it.id}`) : undefined)}>
+              <div className="row" style={{ cursor: it.id || isLab || it.logId ? 'pointer' : 'default' }} onClick={() => (isLab ? setOpen(open === it.id ? null : it.id!) : it.members ? setOpenCluster(openCluster === it.id ? null : it.id!) : it.id ? nav(`/event/${it.id}`) : it.logId ? setEditLog(it.logId) : undefined)}>
                 <span className="d">{dateLabel(it.date)}</span>
                 <span className="grow">
                   {it.label}
@@ -132,6 +134,10 @@ export default function Timeline() {
             ))}
         </div>
       )}
+      {editLog && (() => {
+        const log = doseLogs.find((l) => l.id === editLog)
+        return log ? <DoseEdit log={log} label={t('meds.generics.' + log.generic, log.generic)} onUndo={() => confirm(t('dose.undoConfirm')) && db.doseLogs.delete(log.id)} onClose={() => setEditLog(null)} /> : null
+      })()}
     </>
   )
 }

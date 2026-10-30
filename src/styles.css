@@ -153,6 +153,13 @@ textarea{width:100%;border:1px solid var(--rule);border-radius:8px;padding:6px 8
 .alert-overlay{position:fixed;inset:0;background:rgba(34,26,51,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:16px}
 .alert-box{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:520px;box-shadow:0 12px 40px rgba(0,0,0,.3);border:2px solid var(--unusual)}
 .alert-box h3{margin:0 0 4px;font-size:20px}
+.alert-box.dose-edit{border-color:var(--accent,#7B5EA7)}
+.alert-box.dose-edit h3{font-size:18px}
+.alert-box.dose-edit input[type=datetime-local]{font-size:17px;padding:8px;min-height:44px}
+.dose-fix{flex:none;min-height:34px;padding:4px 12px;border-radius:999px;border:1px solid var(--accent);background:#fff;color:var(--accent-ink);font-size:13px;font-weight:700;cursor:pointer}
+.dose-edit-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.dose-edit-quick .tag{padding:6px 10px;font-size:13.5px;cursor:pointer}
+.dose-edit-undo{display:block;margin:14px auto 0;background:none;border:0;color:var(--warn);font-size:13.5px;text-decoration:underline;cursor:pointer}
 .alert-dog{border:2px solid var(--rule);border-radius:12px;padding:0 10px 6px;margin-top:8px;overflow:hidden}
 .alert-dogname{margin:0 -10px 4px;padding:6px 12px;color:#fff;font-weight:800;font-size:17px;letter-spacing:.04em}
 .alert-dog .row{border-top:1px solid #F0EDF5}

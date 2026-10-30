@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import PushNudge from './PushNudge'
 import { PressureCard } from './Pressure'
 import DogPhoto from './DogPhoto'
+import DoseEdit from './DoseEdit'
 import { dogColorMap } from '../lib/dogColor'
 import { useDogs } from '../lib/useData'
 import { db, uid, type DoseLog, type DosePlan, type Medication } from '../db'
@@ -31,6 +32,8 @@ export default function Home() {
   const VIEW_KEY = 'purplelog.home.doseView'
   const [doseView, setDoseViewState] = useState<'med' | 'time'>(() => { try { return (localStorage.getItem(VIEW_KEY) as 'med' | 'time') || 'time' } catch { return 'time' } })
   const setDoseView = (v: 'med' | 'time') => { setDoseViewState(v); try { localStorage.setItem(VIEW_KEY, v) } catch { /* ignore */ } }
+  // recorded dose being corrected (time given / remove)
+  const [editing, setEditing] = useState<{ log: DoseLog; plan?: DosePlan; label: string } | null>(null)
   if (!dog) return null
 
   const now = today()
@@ -242,7 +245,11 @@ export default function Home() {
                           {it.log && <span className="note"> {it.log.kind === 'skipped' ? t('dose.skipped') : `✓ ${it.log.time.slice(11, 16)}`}</span>}
                         </span>
                         {it.log ? (
-                          <button className="tag g" onClick={() => (it.plan ? undoPlan(it.plan, it.log!) : undoDose(it.log!))} title={t('dose.undo')}>↺</button>
+                          it.log.kind === 'skipped' ? (
+                            <button className="tag g" onClick={() => undoDose(it.log!)} title={t('dose.undo')}>↺</button>
+                          ) : (
+                            <button className="dose-fix" onClick={() => setEditing({ log: it.log!, plan: it.plan, label: it.label })} title={t('dose.editTitle')} aria-label={t('dose.editTitle')}>{t('dose.fix')}</button>
+                          )
                         ) : it.plan ? (
                           <>
                             <button className="dose-btn sm" onClick={() => givePlan(it.plan!)}>{t('dose.give')}</button>
@@ -295,7 +302,7 @@ export default function Home() {
                         — {slot} <small>{t('dose.skipped')}</small>
                       </button>
                     ) : (
-                    <button key={slot} className="dose-btn done" onClick={() => undoDose(log)} title={t('dose.undo')}>
+                    <button key={slot} className="dose-btn done" onClick={() => setEditing({ log, label: t('meds.generics.' + m.generic, m.generic) })} title={t('dose.editTitle')}>
                       ✓ {slot}{!uniform && slotDose(m, slot) != null ? <small>{slotDose(m, slot)}mg</small> : null} <small>{log.time.slice(11, 16)}</small>
                     </button>
                     )
@@ -387,6 +394,7 @@ export default function Home() {
         ))}
       </div>
       <div className="note" style={{ textAlign: 'center' }}>{Object.keys(CODES).length ? '' : ''}</div>
+      {editing && <DoseEdit log={editing.log} label={editing.label} onUndo={() => (editing.plan ? undoPlan(editing.plan, editing.log) : undoDose(editing.log))} onClose={() => setEditing(null)} />}
     </>
   )
 }
