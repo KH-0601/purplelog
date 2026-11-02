@@ -71,13 +71,24 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ devices: subs?.length ?? 0, sent: ok, errors }), { headers: { ...cors, 'content-type': 'application/json' } })
   }
   if (CRON_SECRET && req.headers.get('x-cron-secret') !== CRON_SECRET) return new Response('unauthorized', { status: 401 })
-  const { data: docs, error } = await sb.from('docs').select('tbl,id,body,deleted').in('tbl', ['dogs', 'medications', 'dosePlans', 'doseLogs']).eq('deleted', false)
+  // Read only what this check needs (runs every minute, and egress is metered): dogs without their photo,
+  // and plans / dose logs from the last 2 days (reminders look back at most 6 h; "24:00" slots belong to yesterday).
+  // Older records stay in the database untouched.
+  const since = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+  const body = (tbl: string) => sb.from('docs').select('body').eq('tbl', tbl).eq('deleted', false)
+  const [dogsR, medsR, plansR, logsR] = await Promise.all([
+    sb.from('docs').select('id:body->>id,name:body->>name,tz:body->>tz').eq('tbl', 'dogs').eq('deleted', false),
+    body('medications'),
+    body('dosePlans').gte('body->>time', since),
+    body('doseLogs').gte('body->>time', since),
+  ])
+  const error = dogsR.error ?? medsR.error ?? plansR.error ?? logsR.error
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
-  const by = (t: string) => (docs as Doc[]).filter((d) => d.tbl === t).map((d) => d.body)
-  const dogs = by('dogs') as Dog[]
-  const meds = by('medications') as Med[]
-  const plans = by('dosePlans') as Plan[]
-  const logs = by('doseLogs') as Log[]
+  const bodies = (r: { data: unknown }) => ((r.data ?? []) as Pick<Doc, 'body'>[]).map((d) => d.body)
+  const dogs = (dogsR.data ?? []) as Dog[]
+  const meds = bodies(medsR) as Med[]
+  const plans = bodies(plansR) as Plan[]
+  const logs = bodies(logsR) as Log[]
   const now = new Date()
 
   const due: { key: string; dogId: string; text: string; minutes: number }[] = []

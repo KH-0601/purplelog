@@ -30,9 +30,10 @@ function localIso(d: Date, tz: string) {
 
 Deno.serve(async (req) => {
   if (CRON_SECRET && req.headers.get('x-cron-secret') !== CRON_SECRET) return new Response('unauthorized', { status: 401 })
-  const { data: docs, error } = await sb.from('docs').select('body').eq('tbl', 'dogs').eq('deleted', false)
+  // only the fields used here (the dog record also holds a photo; egress is metered)
+  const { data: docs, error } = await sb.from('docs').select('id:body->>id,name:body->>name,tz:body->>tz,gridLat:body->gridLat,gridLon:body->gridLon,pressureAlert:body->pressureAlert').eq('tbl', 'dogs').eq('deleted', false)
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
-  const dogs = (docs ?? []).map((d: { body: Dog }) => d.body).filter((d) => d.gridLat != null && d.gridLon != null && d.pressureAlert?.enabled !== false)
+  const dogs = ((docs ?? []) as Dog[]).filter((d) => d.gridLat != null && d.gridLon != null && d.pressureAlert?.enabled !== false)
 
   // one forecast per grid cell
   const byCell = new Map<string, Dog[]>()
