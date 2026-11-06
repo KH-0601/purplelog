@@ -4,11 +4,12 @@ import type { Dog } from '../db'
 /**
  * App-defined guide values (not a clinical standard): pressure change within one 6-hour block
  * (03-09, 09-15, 15-21, 21-03 local). Adjustable per dog in Settings.
+ * warn / rise follow a consumer barometer app's grading seen on screen (-2.7 caution, -2.8 warning, +1.4 rising).
  */
 export const DEFAULT_SLIGHT_DROP = 1.5
 export const DEFAULT_CAUTION_DROP = 2.5
-export const DEFAULT_WARN_DROP = 3.5
-export const DEFAULT_RISE = 2.0
+export const DEFAULT_WARN_DROP = 2.8
+export const DEFAULT_RISE = 1.4
 export const DEFAULT_LEAD_HOURS = 2
 export const BLOCK_H = 6
 

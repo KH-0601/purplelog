@@ -14,7 +14,7 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
 // app guide values (same as the app's src/lib/pressure.ts): hPa fall within a 6-hour block (03-09, 09-15, 15-21, 21-03)
-const DEFAULT_WARN = 3.5
+const DEFAULT_WARN = 2.8
 const DEFAULT_LEAD_H = 2
 const BLOCK_H = 6
 

@@ -10,6 +10,7 @@ import { requestNotifyPermission } from '../lib/alerts'
 import { pushState, subscribePush, unsubscribePush, type PushState } from '../lib/push'
 import { DOG_PALETTE, dogColorMap } from '../lib/dogColor'
 import { invokeFunction } from '../lib/supabase'
+import { DEFAULT_CAUTION_DROP, DEFAULT_LEAD_HOURS, DEFAULT_RISE, DEFAULT_SLIGHT_DROP, DEFAULT_WARN_DROP } from '../lib/pressure'
 import DogPhoto from './DogPhoto'
 import { GENERICS, PATTERN_COLORS, dogPatterns } from './shared'
 import { useDrugs } from '../lib/useData'
@@ -232,11 +233,11 @@ export default function Settings() {
           <div className="card">
             <h4>{t('pressure.settings')}</h4>
             <div className="row"><span className="grow">{t('pressure.notify')}</span><button className={'toggle ' + (view.pressureAlert?.enabled !== false ? 'on' : '')} onClick={() => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), enabled: dog.pressureAlert?.enabled === false } })} /></div>
-            <div className="field"><span className="k">{t('pressure.leadHours')}</span><input type="number" min={0.5} max={12} step={0.5} defaultValue={view.pressureAlert?.leadHours ?? 2} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), leadHours: Number(e.target.value) || 2 } })} /></div>
-            <div className="field"><span className="k">{t('pressure.warnDrop')}</span><input type="number" min={0.5} step={0.5} defaultValue={view.pressureAlert?.warn6 ?? 3.5} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), warn6: Number(e.target.value) || 3.5 } })} /></div>
-            <div className="field"><span className="k">{t('pressure.cautionDrop')}</span><input type="number" min={0.5} step={0.5} defaultValue={view.pressureAlert?.caution6 ?? 2.5} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), caution6: Number(e.target.value) || 2.5 } })} /></div>
-            <div className="field"><span className="k">{t('pressure.slightDrop')}</span><input type="number" min={0.5} step={0.5} defaultValue={view.pressureAlert?.slight6 ?? 1.5} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), slight6: Number(e.target.value) || 1.5 } })} /></div>
-            <div className="field"><span className="k">{t('pressure.riseUp')}</span><input type="number" min={0.5} step={0.5} defaultValue={view.pressureAlert?.rise6 ?? 2.0} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), rise6: Number(e.target.value) || 2.0 } })} /></div>
+            <div className="field"><span className="k">{t('pressure.leadHours')}</span><input type="number" min={0.5} max={12} step={0.5} defaultValue={view.pressureAlert?.leadHours ?? DEFAULT_LEAD_HOURS} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), leadHours: Number(e.target.value) || DEFAULT_LEAD_HOURS } })} /></div>
+            <div className="field"><span className="k">{t('pressure.warnDrop')}</span><input type="number" min={0.5} step={0.1} defaultValue={view.pressureAlert?.warn6 ?? DEFAULT_WARN_DROP} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), warn6: Number(e.target.value) || DEFAULT_WARN_DROP } })} /></div>
+            <div className="field"><span className="k">{t('pressure.cautionDrop')}</span><input type="number" min={0.5} step={0.1} defaultValue={view.pressureAlert?.caution6 ?? DEFAULT_CAUTION_DROP} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), caution6: Number(e.target.value) || DEFAULT_CAUTION_DROP } })} /></div>
+            <div className="field"><span className="k">{t('pressure.slightDrop')}</span><input type="number" min={0.5} step={0.1} defaultValue={view.pressureAlert?.slight6 ?? DEFAULT_SLIGHT_DROP} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), slight6: Number(e.target.value) || DEFAULT_SLIGHT_DROP } })} /></div>
+            <div className="field"><span className="k">{t('pressure.riseUp')}</span><input type="number" min={0.5} step={0.1} defaultValue={view.pressureAlert?.rise6 ?? DEFAULT_RISE} onBlur={(e) => db.dogs.update(dog.id, { pressureAlert: { ...(dog.pressureAlert ?? {}), rise6: Number(e.target.value) || DEFAULT_RISE } })} /></div>
             <div className="note">{t('pressure.settingsNote')}</div>
           </div>
           <div className="card">
