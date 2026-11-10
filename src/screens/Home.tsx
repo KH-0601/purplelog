@@ -5,6 +5,7 @@ import PushNudge from './PushNudge'
 import { PressureCard } from './Pressure'
 import DogPhoto from './DogPhoto'
 import DoseEdit from './DoseEdit'
+import { MemoCard } from './DayMemo'
 import { dogColorMap } from '../lib/dogColor'
 import { useDogs } from '../lib/useData'
 import { db, uid, type DoseLog, type DosePlan, type Medication } from '../db'
@@ -352,6 +353,7 @@ export default function Home() {
         )}
       </div>
 
+      <MemoCard dog={dog} />
       <PressureCard />
       <div className="card">
         <h4>{t('home.last30')}</h4>

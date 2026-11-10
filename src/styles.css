@@ -159,6 +159,13 @@ textarea{width:100%;border:1px solid var(--rule);border-radius:8px;padding:6px 8
 .dose-fix{flex:none;min-height:34px;padding:4px 12px;border-radius:999px;border:1px solid var(--accent);background:#fff;color:var(--accent-ink);font-size:13px;font-weight:700;cursor:pointer}
 .dose-edit-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .dose-edit-quick .tag{padding:6px 10px;font-size:13.5px;cursor:pointer}
+.memo-tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 6px}
+.memo-tags button{min-height:36px;padding:4px 12px;border:1.5px solid var(--rule);border-radius:999px;background:#fff;color:var(--ink);font-size:13.5px}
+.memo-tags button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.memo-input{font-size:16px}
+.memo-body{white-space:pre-wrap}
+.tag.memo,.tag.memo-other{background:#F1EFF5;color:var(--ink)}
+.tag.memo-appetite{background:#FDEEDC;color:#9A5A12}.tag.memo-energy{background:#FFF6CC;color:#7A6200}.tag.memo-urine{background:var(--lab-soft);color:var(--lab)}.tag.memo-stool{background:#F1E7DD;color:#6B4A2E}
 .dose-edit-undo{display:block;margin:14px auto 0;background:none;border:0;color:var(--warn);font-size:13.5px;text-decoration:underline;cursor:pointer}
 .alert-dog{border:2px solid var(--rule);border-radius:12px;padding:0 10px 6px;margin-top:8px;overflow:hidden}
 .alert-dogname{margin:0 -10px 4px;padding:6px 12px;color:#fff;font-weight:800;font-size:17px;letter-spacing:.04em}

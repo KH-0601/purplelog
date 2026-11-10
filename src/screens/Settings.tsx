@@ -89,12 +89,13 @@ export default function Settings() {
   }
   async function removeDog(d: Dog) {
     if (!confirm(t('settings.deleteDogConfirm', { name: d.name }))) return
-    await db.transaction('rw', [db.dogs, db.events, db.medications, db.labs, db.doseLogs, db.monthly], async () => {
+    await db.transaction('rw', [db.dogs, db.events, db.medications, db.labs, db.doseLogs, db.monthly, db.dayNotes], async () => {
       await db.events.where('dogId').equals(d.id).delete()
       await db.medications.where('dogId').equals(d.id).delete()
       await db.labs.where('dogId').equals(d.id).delete()
       await db.doseLogs.where('dogId').equals(d.id).delete()
       await db.monthly.where('dogId').equals(d.id).delete()
+      await db.dayNotes.where('dogId').equals(d.id).delete()
       await db.dogs.delete(d.id)
     })
     const rest = dogs.filter((x) => x.id !== d.id)
@@ -118,6 +119,7 @@ export default function Settings() {
       monthly: await db.monthly.toArray(),
       medications: await db.medications.toArray(),
       doseLogs: await db.doseLogs.toArray(),
+      dayNotes: await db.dayNotes.toArray(),
       labs: await db.labs.toArray(),
       refRanges: await db.refRanges.toArray(),
       weatherDaily: await db.weatherDaily.toArray(),

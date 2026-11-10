@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { db, type Event } from '../db'
-import { useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useNames } from '../lib/useData'
+import { useDayNotes, useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useNames } from '../lib/useData'
 import { buildEpisodes } from '../lib/episodes'
 import { daysBetween, fmtDate, fmtDur } from '../lib/format'
 import { EventTag, eventLabel } from './shared'
 import DoseEdit from './DoseEdit'
+import { MemoEdit, MemoText } from './DayMemo'
 
-type Item = { date: string; kind: 'cluster' | 'seizure' | 'unusual' | 'other' | 'dose' | 'doseLog' | 'prnLog' | 'lab' | 'weight'; label: string; sub?: string; id?: string; by?: string; logId?: string; members?: string[] }
+type Item = { date: string; kind: 'cluster' | 'seizure' | 'unusual' | 'other' | 'dose' | 'doseLog' | 'prnLog' | 'lab' | 'weight' | 'memo'; label: string; sub?: string; id?: string; by?: string; logId?: string; memoId?: string; members?: string[] }
 
 export default function Timeline() {
   const { t, i18n } = useTranslation()
@@ -19,19 +20,23 @@ export default function Timeline() {
   const labs = useLabs(dog?.id)
   const monthly = useMonthly(dog?.id)
   const doseLogs = useDoseLogs(dog?.id)
+  const notes = useDayNotes(dog?.id)
   const [open, setOpen] = useState<string | null>(null)
   const [showMonthly, setShowMonthly] = useState(false)
   // filter state survives opening a record and coming back (per device)
   const FILTER_KEY = 'purplelog.timeline.filters'
-  const saved = (() => { try { return JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') as { doses?: boolean; prn?: boolean } } catch { return {} } })()
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') as { doses?: boolean; prn?: boolean; memos?: boolean } } catch { return {} } })()
   const [showDoses, setShowDosesState] = useState(saved.doses ?? true)
   const [showPrn, setShowPrnState] = useState(saved.prn ?? true)
-  const persist = (doses: boolean, prn: boolean) => { try { localStorage.setItem(FILTER_KEY, JSON.stringify({ doses, prn })) } catch { /* ignore */ } }
-  const setShowDoses = (v: boolean) => { setShowDosesState(v); persist(v, showPrn) }
-  const setShowPrn = (v: boolean) => { setShowPrnState(v); persist(showDoses, v) }
+  const [showMemos, setShowMemosState] = useState(saved.memos ?? true)
+  const persist = (doses: boolean, prn: boolean, memos: boolean) => { try { localStorage.setItem(FILTER_KEY, JSON.stringify({ doses, prn, memos })) } catch { /* ignore */ } }
+  const setShowDoses = (v: boolean) => { setShowDosesState(v); persist(v, showPrn, showMemos) }
+  const setShowPrn = (v: boolean) => { setShowPrnState(v); persist(showDoses, v, showMemos) }
+  const setShowMemos = (v: boolean) => { setShowMemosState(v); persist(showDoses, showPrn, v) }
+  const [editMemo, setEditMemo] = useState<string | null>(null)
   const [openCluster, setOpenCluster] = useState<string | null>(null)
   const [editLog, setEditLog] = useState<string | null>(null)
-  const names = useNames([...events.map((e) => e.by), ...doseLogs.map((l) => l.by)])
+  const names = useNames([...events.map((e) => e.by), ...doseLogs.map((l) => l.by), ...notes.map((n) => n.by)])
   if (!dog) return null
 
   const items: Item[] = []
@@ -55,10 +60,11 @@ export default function Timeline() {
     items.push({ date: l.time, kind: prn ? 'prnLog' : 'doseLog', label: `${t('meds.generics.' + l.generic, l.generic)}${!prn && l.slot ? ` ${l.slot}` : ''} ${l.mgPerDose ? l.mgPerDose + ' mg' : ''}`, sub: l.note, by: l.by, logId: l.id })
   }
   for (const l of labs) items.push({ date: l.datetime, kind: 'lab', label: l.results.map((r) => `${r.analyte} ${r.valueText ?? r.value}`).join(' / '), id: l.id })
+  if (showMemos) for (const n of notes) items.push({ date: `${n.date}T${n.time}`, kind: 'memo', label: n.text, by: n.by, memoId: n.id })
   for (const w of dog.weights) items.push({ date: w.date, kind: 'weight', label: `${w.kg} kg` })
   items.sort((a, b) => b.date.localeCompare(a.date))
 
-  const tag = (k: Item['kind']) => ({ cluster: ['s', '群発'], seizure: ['s', '発作'], unusual: ['u', 'いつもと違う'], other: ['g', 'その他'], dose: ['m', t('timeline.doseChange')], doseLog: ['m', t('timeline.doseLog')], prnLog: ['w', t('timeline.prnLog')], lab: ['lab', t('timeline.lab')], weight: ['g', t('timeline.weight')] })[k]
+  const tag = (k: Item['kind']) => ({ cluster: ['s', '群発'], seizure: ['s', '発作'], unusual: ['u', 'いつもと違う'], other: ['g', 'その他'], dose: ['m', t('timeline.doseChange')], doseLog: ['m', t('timeline.doseLog')], prnLog: ['w', t('timeline.prnLog')], lab: ['lab', t('timeline.lab')], weight: ['g', t('timeline.weight')], memo: ['memo', t('memo.label')] })[k]
   const thisYear = String(new Date().getFullYear())
   const dateLabel = (d: string) => (d.slice(0, 4) === thisYear ? fmtDate(d, i18n.language).slice(5) : fmtDate(d, i18n.language).slice(2)) + (d.length > 10 && d.slice(11, 16) !== '00:00' ? ` ${d.slice(11, 16)}` : '')
 
@@ -71,6 +77,7 @@ export default function Timeline() {
       <div className="period">
         <button className={showDoses ? 'on' : ''} onClick={() => setShowDoses(!showDoses)}>{t('timeline.showDoses')}</button>
         <button className={showPrn ? 'on' : ''} onClick={() => setShowPrn(!showPrn)}>{t('timeline.showPrn')}</button>
+        <button className={showMemos ? 'on' : ''} onClick={() => setShowMemos(!showMemos)}>{t('memo.show')}</button>
       </div>
       <div className="card">
         {items.map((it, i) => {
@@ -80,10 +87,10 @@ export default function Timeline() {
           const who = it.by && names[it.by] ? names[it.by] : ''
           return (
             <div key={i}>
-              <div className="row" style={{ cursor: it.id || isLab || it.logId ? 'pointer' : 'default' }} onClick={() => (isLab ? setOpen(open === it.id ? null : it.id!) : it.members ? setOpenCluster(openCluster === it.id ? null : it.id!) : it.id ? nav(`/event/${it.id}`) : it.logId ? setEditLog(it.logId) : undefined)}>
+              <div className="row" style={{ cursor: it.id || isLab || it.logId || it.memoId ? 'pointer' : 'default' }} onClick={() => (isLab ? setOpen(open === it.id ? null : it.id!) : it.members ? setOpenCluster(openCluster === it.id ? null : it.id!) : it.id ? nav(`/event/${it.id}`) : it.logId ? setEditLog(it.logId) : it.memoId ? setEditMemo(it.memoId) : undefined)}>
                 <span className="d">{dateLabel(it.date)}</span>
                 <span className="grow">
-                  {it.label}
+                  {it.memoId ? (() => { const n = notes.find((x) => x.id === it.memoId); return n ? <MemoText note={n} /> : it.label })() : it.label}
                   {who && <span className="note"> · {who}</span>}
                   {it.sub && <div className="note">{it.sub}</div>}
                 </span>
@@ -134,6 +141,10 @@ export default function Timeline() {
             ))}
         </div>
       )}
+      {editMemo && (() => {
+        const n = notes.find((x) => x.id === editMemo)
+        return n ? <MemoEdit note={n} onClose={() => setEditMemo(null)} /> : null
+      })()}
       {editLog && (() => {
         const log = doseLogs.find((l) => l.id === editLog)
         return log ? <DoseEdit log={log} label={t('meds.generics.' + log.generic, log.generic)} onUndo={() => confirm(t('dose.undoConfirm')) && db.doseLogs.delete(log.id)} onClose={() => setEditLog(null)} /> : null

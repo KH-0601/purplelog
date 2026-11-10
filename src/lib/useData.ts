@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type Dog, type DoseLog, type DosePlan, type Drug, type Event, type Lab, type Medication, type MonthlySummary, type ReferenceRange, type Settings, type WeatherDaily } from '../db'
+import { db, type DayNote, type Dog, type DoseLog, type DosePlan, type Drug, type Event, type Lab, type Medication, type MonthlySummary, type ReferenceRange, type Settings, type WeatherDaily } from '../db'
 import { resolveNames } from './cloud'
 
 export const defaultSettings: Settings = { id: 'app', lang: 'ja', role: 'owner', consentAggregate: false, consentResearch: false, currentDogId: 'toby' }
@@ -36,6 +36,9 @@ export function useDoseLogs(dogId?: string): DoseLog[] {
 }
 export function useDosePlans(dogId?: string): DosePlan[] {
   return useLiveQuery(async () => (dogId ? db.dosePlans.where('dogId').equals(dogId).sortBy('time') : ([] as DosePlan[])), [dogId]) ?? EMPTY
+}
+export function useDayNotes(dogId?: string): DayNote[] {
+  return useLiveQuery(async () => (dogId ? (await db.dayNotes.where('dogId').equals(dogId).toArray()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)) : ([] as DayNote[])), [dogId]) ?? EMPTY
 }
 export function useDrugs(): Drug[] {
   return useLiveQuery(() => db.drugs.orderBy('name').toArray(), []) ?? EMPTY

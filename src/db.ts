@@ -169,6 +169,23 @@ export interface DosePlan {
   by?: string
 }
 
+/** Daily note tags: appetite, energy, urination, stool, other. */
+export const MEMO_TAGS = ['appetite', 'energy', 'urine', 'stool', 'other'] as const
+export type MemoTag = (typeof MEMO_TAGS)[number]
+/** A free-text note about the dog's day (e.g. surgery, ate half), with optional tags. */
+export interface DayNote {
+  id: string
+  dogId: string
+  /** the day it is about (YYYY-MM-DD) */
+  date: string
+  /** clock time it was written (HH:MM) */
+  time: string
+  tags: MemoTag[]
+  text: string
+  by?: string
+  updatedAt?: string
+}
+
 export interface LabResult { analyte: string; value: number; valueText?: string | null; unit: string }
 export interface Lab {
   id: string
@@ -233,6 +250,7 @@ export class PurpleDB extends Dexie {
   doseLogs!: Table<DoseLog, string>
   dosePlans!: Table<DosePlan, string>
   drugs!: Table<Drug, string>
+  dayNotes!: Table<DayNote, string>
   weatherDaily!: Table<WeatherDaily, string>
   settings!: Table<Settings, string>
   constructor() {
@@ -260,6 +278,7 @@ export class PurpleDB extends Dexie {
     this.version(3).stores({ refs: null })
     this.version(4).stores({ dosePlans: 'id, dogId, time, [dogId+time]' })
     this.version(5).stores({ drugs: 'id, name' })
+    this.version(6).stores({ dayNotes: 'id, dogId, date, [dogId+date]' })
   }
 }
 export const db = new PurpleDB()
@@ -267,5 +286,5 @@ export const db = new PurpleDB()
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 
 /** Tables mirrored to the shared database when sharing is available. */
-export const SHARED_TABLES = ['dogs', 'events', 'medications', 'labs', 'refRanges', 'doseLogs', 'dosePlans', 'monthly', 'drugs'] as const
+export const SHARED_TABLES = ['dogs', 'events', 'medications', 'labs', 'refRanges', 'doseLogs', 'dosePlans', 'monthly', 'drugs', 'dayNotes'] as const
 export type SharedTable = (typeof SHARED_TABLES)[number]
