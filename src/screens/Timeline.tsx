@@ -60,7 +60,7 @@ export default function Timeline() {
     items.push({ date: l.time, kind: prn ? 'prnLog' : 'doseLog', label: `${t('meds.generics.' + l.generic, l.generic)}${!prn && l.slot ? ` ${l.slot}` : ''} ${l.mgPerDose ? l.mgPerDose + ' mg' : ''}`, sub: l.note, by: l.by, logId: l.id })
   }
   for (const l of labs) items.push({ date: l.datetime, kind: 'lab', label: l.results.map((r) => `${r.analyte} ${r.valueText ?? r.value}`).join(' / '), id: l.id })
-  if (showMemos) for (const n of notes) items.push({ date: `${n.date}T${n.time}`, kind: 'memo', label: n.text, by: n.by, memoId: n.id })
+  if (showMemos) for (const n of notes) items.push({ date: n.time ? `${n.date}T${n.time}` : n.date, kind: 'memo', label: n.text, by: n.by, memoId: n.id })
   for (const w of dog.weights) items.push({ date: w.date, kind: 'weight', label: `${w.kg} kg` })
   items.sort((a, b) => b.date.localeCompare(a.date))
 

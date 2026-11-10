@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { latestWeight, useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useRefs } from '../lib/useData'
+import { latestWeight, useDayNotes, useDog, useDoseLogs, useEvents, useLabs, useMeds, useMonthly, useRefs } from '../lib/useData'
 import { dailyMg, defaultSchedule, isActiveMed, isScheduledMed, isUniformDose, medSlots, slotDose } from './shared'
 import { buildEpisodes } from '../lib/episodes'
 import { monthlyRows } from '../lib/monthly'
@@ -10,6 +10,8 @@ import { classifyTiming } from '../lib/monitoring'
 import { findRange } from '../lib/normalize'
 import LongTermChart, { type Period } from './LongTermChart'
 import { DRUG_ANALYTES } from './shared'
+import { MemoText } from './DayMemo'
+import { MEMO_TAGS, type MemoTag } from '../db'
 
 const analyteGeneric: Record<string, string> = { PB: 'phenobarbital', KBr: 'potassium_bromide', ZNS: 'zonisamide', LEV: 'levetiracetam' }
 
@@ -22,7 +24,10 @@ export default function VetReport() {
   const labs = useLabs(dog?.id)
   const refs = useRefs()
   const doseLogs = useDoseLogs(dog?.id)
+  const notes = useDayNotes(dog?.id)
   const [period, setPeriod] = useState<Period>('y1')
+  // day notes shown in the report: all tags, or only the chosen one (the filter itself is not printed)
+  const [memoTag, setMemoTag] = useState<MemoTag | 'all'>('all')
   if (!dog) return null
   const now = today()
   const from = period === 'all' ? undefined : addDays(now, period === 'y1' ? -365 : period === 'm6' ? -183 : period === 'm3' ? -91 : -30)
@@ -48,6 +53,7 @@ export default function VetReport() {
   const planned = meds.filter((m) => isScheduledMed(m) && isActiveMed(m, now)).reduce((a, m) => a + (m.scheduleTimes?.length ?? defaultSchedule(currentDose(m)?.timesPerDay ?? 2).length) * 30, 0)
   const given = doseLogs.filter((l) => l.time >= adhFrom && l.kind !== 'prn' && l.kind !== 'skipped' && l.slot !== 'prn').length
   const prnLogs = doseLogs.filter((l) => (l.kind === 'prn' || l.slot === 'prn') && (!from || l.time >= from))
+  const repNotes = notes.filter((n) => (!from || n.date >= from) && (memoTag === 'all' || n.tags.includes(memoTag))).reverse()
 
   return (
     <>
@@ -124,6 +130,25 @@ export default function VetReport() {
           </tbody>
         </table>
         <div className="note">{t('report.troughFooter')}。{t('report.weatherFooter')}</div>
+      </div>
+      <div className="card">
+        <h4>{t('memo.reportTitle')}</h4>
+        <div className="period noprint" style={{ flexWrap: 'wrap', marginBottom: 6 }}>
+          {(['all', ...MEMO_TAGS] as const).map((k) => (
+            <button key={k} className={memoTag === k ? 'on' : ''} onClick={() => setMemoTag(k)}>{k === 'all' ? t('memo.all') : t('memo.tags.' + k)}</button>
+          ))}
+        </div>
+        {repNotes.length === 0 && <div className="note">{t('memo.reportNone')}</div>}
+        <table className="tbl">
+          <tbody>
+            {repNotes.map((n) => (
+              <tr key={n.id}>
+                <td className="note" style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>{fmtDate(n.date, i18n.language)}{n.time ? ` ${n.time}` : ''}</td>
+                <td><MemoText note={n} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <LongTermChart events={events} monthly={monthly} meds={meds} labs={labs} refs={refs} period={period} compact dog={dog} />
     </>

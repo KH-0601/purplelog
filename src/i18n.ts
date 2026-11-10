@@ -65,7 +65,7 @@ const ja = {
     triggerMin: '何分を超えたら表示するか', steps: 'ステップ', stepN: 'ステップ {{n}}', addStep: 'ステップを追加', placeholder: '例: 主治医から渡された薬を使う（薬の名前と量は主治医の指示どおりに）', vetName: '主治医・病院', vetPhone: '電話番号', hospitalNote: '病院への行き方メモ',
     calm: '落ち着きましょう', over: '{{min}}分を超えています。主治医と決めた手順を順に確認します', did: 'やった → 次へ', notYet: 'まだ', callVet: '主治医に電話', goHospital: '落ち着いて。止まらなければ、このまま病院へ', noPlan: '手順が登録されていません。今は主治医の指示に従ってください。落ち着いたら、主治医と相談した手順を設定に登録してください', allDone: '手順はすべて確認しました', actionsTaken: '長引いたときに確認した手順', remove: '削除',
   },
-  memo: { title: '今日のメモ', label: 'メモ', placeholder: '例：開腹オペ、朝ごはんを半分残した', add: 'メモを追加', editTitle: 'メモを直す', date: '日付', remove: 'このメモを消す', removeConfirm: 'このメモを消しますか？', show: 'メモを表示', tags: { appetite: '食欲', energy: '元気', urine: '排尿', stool: '排便', other: 'その他' } },
+  memo: { title: '今日のメモ', label: 'メモ', placeholder: '例：開腹オペ、朝ごはんを半分残した', add: 'メモを追加', editTitle: 'メモを直す', date: '日付', time: '時刻', when: '日時を指定', whenNow: '今の日時にもどす', timeBlankNow: '時刻が空欄なら、今の時刻で記録します', timeBlankUnknown: '時刻はわからなければ空欄のままでかまいません', otherDay: '今日以外の日のメモは「記録」の画面に入ります', savedOtherDay: '{{date}} のメモとして「記録」に保存しました', reportTitle: 'メモ', reportNone: 'この期間のメモはありません', all: 'すべて', remove: 'このメモを消す', removeConfirm: 'このメモを消しますか？', show: 'メモを表示', tags: { appetite: '食欲', energy: '元気', urine: '排尿', stool: '排便', other: 'その他' } },
   common: { dog: '犬', loading: '読み込み中', saved: '保存しました', error: 'エラー', yes: 'はい', no: 'いいえ', min: '分', sec: '秒', hPa: 'hPa', today: '今日' },
 }
 
@@ -133,7 +133,7 @@ const en: typeof ja = {
     triggerMin: 'Show after (minutes)', steps: 'Steps', stepN: 'Step {{n}}', addStep: 'Add step', placeholder: 'e.g. Use the rescue medication your vet gave you, exactly as instructed', vetName: 'Veterinarian / clinic', vetPhone: 'Phone', hospitalNote: 'How to get to the clinic',
     calm: 'Stay calm', over: 'Over {{min}} minutes. Let’s go through the steps you agreed with your vet', did: 'Done → next', notYet: 'Not yet', callVet: 'Call the vet', goHospital: 'Stay calm. If it does not stop, go to the clinic now', noPlan: 'No steps registered. Follow your veterinarian’s instructions now. Later, add the steps you agreed with your vet in Settings', allDone: 'All steps checked', actionsTaken: 'Steps checked during the long seizure', remove: 'Remove',
   },
-  memo: { title: 'Today’s notes', label: 'Note', placeholder: 'e.g. abdominal surgery, left half of breakfast', add: 'Add note', editTitle: 'Edit note', date: 'Date', remove: 'Delete this note', removeConfirm: 'Delete this note?', show: 'Show notes', tags: { appetite: 'Appetite', energy: 'Energy', urine: 'Urination', stool: 'Stool', other: 'Other' } },
+  memo: { title: 'Today’s notes', label: 'Note', placeholder: 'e.g. abdominal surgery, left half of breakfast', add: 'Add note', editTitle: 'Edit note', date: 'Date', time: 'Time', when: 'Set date & time', whenNow: 'Use now', timeBlankNow: 'Leave the time blank to use the current time', timeBlankUnknown: 'Leave the time blank if you do not know it', otherDay: 'Notes for other days go to the log', savedOtherDay: 'Saved to the log as a note for {{date}}', reportTitle: 'Notes', reportNone: 'No notes in this period', all: 'All', remove: 'Delete this note', removeConfirm: 'Delete this note?', show: 'Show notes', tags: { appetite: 'Appetite', energy: 'Energy', urine: 'Urination', stool: 'Stool', other: 'Other' } },
   common: { dog: 'Dog', loading: 'Loading', saved: 'Saved', error: 'Error', yes: 'Yes', no: 'No', min: 'min', sec: 's', hPa: 'hPa', today: 'Today' },
 }
 

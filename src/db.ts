@@ -178,7 +178,7 @@ export interface DayNote {
   dogId: string
   /** the day it is about (YYYY-MM-DD) */
   date: string
-  /** clock time it was written (HH:MM) */
+  /** clock time (HH:MM); '' = not known */
   time: string
   tags: MemoTag[]
   text: string

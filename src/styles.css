@@ -163,6 +163,8 @@ textarea{width:100%;border:1px solid var(--rule);border-radius:8px;padding:6px 8
 .memo-tags button{min-height:36px;padding:4px 12px;border:1.5px solid var(--rule);border-radius:999px;background:#fff;color:var(--ink);font-size:13.5px}
 .memo-tags button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
 .memo-input{font-size:16px}
+.memo-when{margin-top:6px;padding:6px 10px;border:1px solid var(--rule);border-radius:10px;background:#FBFAFD}
+.memo-when input[type=date],.memo-when input[type=time],.alert-box.dose-edit input[type=date],.alert-box.dose-edit input[type=time]{font-size:16px;min-height:40px}
 .memo-body{white-space:pre-wrap}
 .tag.memo,.tag.memo-other{background:#F1EFF5;color:var(--ink)}
 .tag.memo-appetite{background:#FDEEDC;color:#9A5A12}.tag.memo-energy{background:#FFF6CC;color:#7A6200}.tag.memo-urine{background:var(--lab-soft);color:var(--lab)}.tag.memo-stool{background:#F1E7DD;color:#6B4A2E}
