@@ -28,6 +28,19 @@ function localIso(d: Date, tz: string) {
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour') === '24' ? '00' : g('hour')}:${g('minute')}`
 }
 
+// Open-Meteo's main host sometimes stops answering; the historical-forecast host serves the same current forecast.
+async function forecast(q: string) {
+  for (const host of ['api.open-meteo.com', 'historical-forecast-api.open-meteo.com']) {
+    try {
+      const r = await fetch(`https://${host}/v1/forecast?${q}`, { signal: AbortSignal.timeout(10000) })
+      if (r.ok) return await r.json()
+    } catch {
+      /* try the next host */
+    }
+  }
+  return null
+}
+
 Deno.serve(async (req) => {
   if (CRON_SECRET && req.headers.get('x-cron-secret') !== CRON_SECRET) return new Response('unauthorized', { status: 401 })
   // only the fields used here (the dog record also holds a photo; egress is metered)
@@ -45,9 +58,8 @@ Deno.serve(async (req) => {
   const messages: { key: string; title: string; body: string }[] = []
   for (const [cell, cellDogs] of byCell) {
     const [lat, lon, tz] = cell.split(',')
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=pressure_msl&forecast_days=2&timezone=${encodeURIComponent(tz)}`)
-    if (!r.ok) continue
-    const j = await r.json()
+    const j = await forecast(`latitude=${lat}&longitude=${lon}&hourly=pressure_msl&forecast_days=2&timezone=${encodeURIComponent(tz)}`)
+    if (!j) continue
     const time: string[] = j.hourly.time
     const p: (number | null)[] = j.hourly.pressure_msl
     const nowLocal = localIso(new Date(), tz)
