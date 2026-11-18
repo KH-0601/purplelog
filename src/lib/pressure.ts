@@ -18,6 +18,8 @@ export interface PressureForecast {
   pressure: (number | null)[]
   temp: (number | null)[]
   code: (number | null)[]
+  /** Set when both forecast hosts were unreachable and this is the last forecast saved on this device (ms epoch of that fetch). */
+  savedAt?: number
 }
 export type Level = 'none' | 'slight' | 'caution' | 'warn' | 'rise'
 export interface Block {
@@ -49,17 +51,49 @@ export const pressureSettings = (dog?: Dog) => {
 export type PressureSettings = ReturnType<typeof pressureSettings>
 
 const cache = new Map<string, { at: number; data: PressureForecast }>()
+// Open-Meteo's main host sometimes stops answering (connections hang); the historical-forecast host runs on other
+// servers and serves the same current forecast, so it is the fallback.
+const HOSTS = ['api.open-meteo.com', 'historical-forecast-api.open-meteo.com']
+const TIMEOUT_MS = 10000
+const SAVED_KEY = 'purplelog.pressure.'
+const SAVED_MAX_MS = 3 * 86400000
+
+async function getJson(url: string) {
+  const ctl = new AbortController()
+  const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS)
+  try {
+    const r = await fetch(url, { signal: ctl.signal })
+    if (!r.ok) throw new Error('pressure ' + r.status)
+    return await r.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export async function fetchPressureForecast(lat: number, lon: number, tz = 'Asia/Tokyo'): Promise<PressureForecast> {
   const key = `${lat},${lon}`
   const hit = cache.get(key)
   if (hit && Date.now() - hit.at < 20 * 60000) return hit.data
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=pressure_msl,temperature_2m,weather_code&past_days=1&forecast_days=8&timezone=${encodeURIComponent(tz)}`
-  const r = await fetch(url)
-  if (!r.ok) throw new Error('pressure ' + r.status)
-  const j = await r.json()
-  const data: PressureForecast = { time: j.hourly.time, pressure: j.hourly.pressure_msl, temp: j.hourly.temperature_2m, code: j.hourly.weather_code }
-  cache.set(key, { at: Date.now(), data })
-  return data
+  const q = `latitude=${lat}&longitude=${lon}&hourly=pressure_msl,temperature_2m,weather_code&past_days=1&forecast_days=8&timezone=${encodeURIComponent(tz)}`
+  for (const host of HOSTS) {
+    try {
+      const j = await getJson(`https://${host}/v1/forecast?${q}`)
+      const data: PressureForecast = { time: j.hourly.time, pressure: j.hourly.pressure_msl, temp: j.hourly.temperature_2m, code: j.hourly.weather_code }
+      cache.set(key, { at: Date.now(), data })
+      try { localStorage.setItem(SAVED_KEY + key, JSON.stringify({ at: Date.now(), data })) } catch { /* storage full or blocked */ }
+      return data
+    } catch {
+      /* try the next host */
+    }
+  }
+  // neither host answered: show the last forecast fetched on this device (up to 3 days old), marked as such
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAVED_KEY + key) || 'null') as { at: number; data: PressureForecast } | null
+    if (saved && Date.now() - saved.at < SAVED_MAX_MS) return { ...saved.data, savedAt: saved.at }
+  } catch {
+    /* no saved forecast */
+  }
+  throw new Error('pressure forecast unavailable')
 }
 
 export function grade(change: number, s: PressureSettings): Level {

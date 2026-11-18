@@ -18,14 +18,35 @@ const isoIn = (h: number) => { const d = new Date(Date.now() + h * 3600000); ret
 function useForecast(dog?: Dog) {
   const [data, setData] = useState<PressureForecast | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (!dog || dog.gridLat == null || dog.gridLon == null) return
     const g = toGrid(dog.gridLat, dog.gridLon)
     let alive = true
+    setErr(null)
     fetchPressureForecast(g.lat, g.lon, dog.tz || 'Asia/Tokyo').then((d) => alive && setData(d)).catch((e) => alive && setErr(String(e?.message ?? e)))
     return () => { alive = false }
-  }, [dog?.id, dog?.gridLat, dog?.gridLon])
-  return { data, err }
+  }, [dog?.id, dog?.gridLat, dog?.gridLon, attempt])
+  return { data, err, retry: () => setAttempt((n) => n + 1) }
+}
+
+/** Error with a retry button, or a note that the forecast shown is an older one saved on this device. */
+function ForecastStatus({ data, err, retry }: { data: PressureForecast | null; err: string | null; retry: () => void }) {
+  const { t } = useTranslation()
+  const when = (ms: number) => { const d = new Date(ms); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+  if (err && !data) return (
+    <div className="note" style={{ color: 'var(--warn)' }}>
+      {t('pressure.error')}
+      <button className="tag g" style={{ marginLeft: 6 }} onClick={(e) => { e.stopPropagation(); retry() }}>{t('pressure.retry')}</button>
+    </div>
+  )
+  if (data?.savedAt) return (
+    <div className="note" style={{ color: 'var(--warn)' }}>
+      {t('pressure.savedAt', { time: when(data.savedAt) })}
+      <button className="tag g" style={{ marginLeft: 6 }} onClick={(e) => { e.stopPropagation(); retry() }}>{t('pressure.retry')}</button>
+    </div>
+  )
+  return null
 }
 
 /** Small static chart for the Home card. */
@@ -85,7 +106,7 @@ export function PressureCard() {
   const nav = useNavigate()
   const dog = useDog()
   const events = useEvents(dog?.id)
-  const { data, err } = useForecast(dog)
+  const { data, err, retry } = useForecast(dog)
   const s = pressureSettings(dog)
   if (!dog) return null
   if (dog.gridLat == null) return (
@@ -113,6 +134,7 @@ export function PressureCard() {
         </>
       )}
       {!data && !err && <div className="note">{t('pressure.loading')}</div>}
+      <ForecastStatus data={data} err={err} retry={retry} />
       {s.enabled && <div className="note">{t('pressure.alertOn', { h: s.leadHours })}</div>}
     </div>
   )
@@ -256,7 +278,7 @@ export default function PressurePage() {
   const { t } = useTranslation()
   const dog = useDog()
   const events = useEvents(dog?.id)
-  const { data, err } = useForecast(dog)
+  const { data, err, retry } = useForecast(dog)
   const s = pressureSettings(dog)
   if (!dog) return null
   if (dog.gridLat == null) return <div className="card"><div className="note">{t('pressure.noGrid')}</div></div>
@@ -264,8 +286,8 @@ export default function PressurePage() {
   return (
     <div className="card">
       <h4>{t('pressure.title')}（{dog.regionName || t('pressure.area')}）</h4>
-      {err && <div className="note">{t('pressure.error')}</div>}
       {!data && !err && <div className="note">{t('pressure.loading')}</div>}
+      <ForecastStatus data={data} err={err} retry={retry} />
       {data && (
         <>
           <PressureStrip data={data} blocks={blocks} seizures={events.filter((e) => e.kind === 'seizure')} height={430} />
